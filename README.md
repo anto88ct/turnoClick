@@ -68,3 +68,5 @@ La barra nera in cima alla pagina consente di navigare rapidamente tra le tre ar
 - Brand color: verde smeraldo `#10b981`
 - Area paziente: accessibile per anziani (bottoni 80px+, testo 22px+)
 - Area dashboard/admin: sidebar verde scuro / slate, tabelle compatte
+
+## test

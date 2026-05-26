@@ -1,0 +1,48 @@
+# ##############################################################################
+# TurnoClick - .gitignore template per Angular + Tailwind + Strumenti AI
+# ##############################################################################
+
+# Dipendenze e pacchetti
+node_modules/
+/dist/
+/.angular/
+
+# Log di sistema e di npm
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# File temporanei e di build di Angular
+.tmp
+.sass-cache
+connect.lock
+coverage/
+libpeerconnection.log
+
+# Cartelle specifiche di strumenti esterni / AI (viste nello screenshot)
+.claude/
+.context/
+
+# File di configurazione dell'IDE (opzionale, ma consigliato)
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# File di sistema
+.DS_Store
+Thumbs.db
+
+# Variabili d'ambiente (crealo se userai file .env per chiavi API o simili)
+.env
+.env.local

@@ -1,4 +1,4 @@
-import { Component, inject, computed, signal } from '@angular/core';
+import { Component, inject, computed, signal, effect } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MockDataService } from '../../core/services/mock-data.service';
@@ -13,125 +13,148 @@ type AuthModal = 'login' | 'register' | null;
   selector: 'app-patient-landing',
   standalone: true,
   imports: [RouterLink, FormsModule, TcBigButtonComponent, SiteBlockRendererComponent],
+  styles: [`
+    /* Scrollbar elegante e sottile */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background-color: #94a3b8;
+    }
+  `],
   template: `
     <div class="min-h-[100dvh] bg-white flex flex-col">
 
-      <!-- ── Auth Modals ─────────────────────────────────────────────────────── -->
       @if (modal()) {
-        <div class="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4"
+        <div class="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
              (click)="modal.set(null)">
-          <div class="bg-white rounded-3xl rounded-b-3xl shadow-2xl w-full max-w-md"
+
+          <div class="relative bg-white rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl w-full sm:max-w-xl max-h-[90dvh] flex flex-col animate-slide-in-up"
                (click)="$event.stopPropagation()">
 
-            @if (modal() === 'login') {
-              <!-- Login modal -->
-              <div class="p-6">
-                <div class="text-center mb-6">
-                  <div class="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center text-white text-lg font-extrabold"
-                       style="background-color: var(--brand)">A</div>
-                  <h2 class="text-xl font-extrabold text-slate-900">Accedi al tuo account</h2>
-                  <p class="text-sm text-slate-500 mt-1">Gestisci appuntamenti e documenti</p>
-                </div>
-                <form (submit)="doLogin(); $event.preventDefault()" class="space-y-4">
-                  <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Email</label>
-                    <input [(ngModel)]="loginEmail" name="email" type="email" required autocomplete="email"
-                           class="tc-input-sm w-full" placeholder="mario.rossi@email.com">
-                  </div>
-                  <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Password</label>
-                    <input [(ngModel)]="loginPassword" name="password" type="password" required autocomplete="current-password"
-                           class="tc-input-sm w-full" placeholder="••••••••">
-                  </div>
-                  @if (authError()) {
-                    <div class="bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold px-4 py-3 rounded-xl">
-                      {{ authError() }}
-                    </div>
-                  }
-                  <button type="submit"
-                          class="w-full py-3.5 rounded-2xl text-white font-bold text-sm transition-opacity hover:opacity-90"
-                          style="background-color: var(--brand)">
-                    Accedi
-                  </button>
-                </form>
-                <div class="mt-5 pt-4 border-t border-slate-100 text-center">
-                  <p class="text-sm text-slate-500">
-                    Non hai un account?
-                    <button (click)="switchModal('register')" class="font-bold ml-1" style="color: var(--brand)">Registrati</button>
-                  </p>
-                </div>
-              </div>
-            }
+            <button (click)="modal.set(null)"
+                    class="absolute top-4 right-4 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
 
-            @if (modal() === 'register') {
-              <!-- Register modal -->
-              <div class="p-6 max-h-[90dvh] overflow-y-auto">
-                <div class="text-center mb-6">
-                  <div class="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center text-white text-lg font-extrabold"
-                       style="background-color: var(--brand)">+</div>
-                  <h2 class="text-xl font-extrabold text-slate-900">Crea il tuo account</h2>
-                  <p class="text-sm text-slate-500 mt-1">Prenota, gestisci documenti e molto altro</p>
-                </div>
-                <form (submit)="doRegister(); $event.preventDefault()" class="space-y-3">
-                  <div class="grid grid-cols-1 gap-3">
-                    <div>
-                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Nome completo *</label>
-                      <input [(ngModel)]="regName" name="name" required autocomplete="name"
-                             class="tc-input-sm w-full" placeholder="Mario Rossi">
-                    </div>
-                    <div>
-                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Email *</label>
-                      <input [(ngModel)]="regEmail" name="email" type="email" required autocomplete="email"
-                             class="tc-input-sm w-full" placeholder="mario.rossi@email.com">
-                    </div>
-                    <div>
-                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Password *</label>
-                      <input [(ngModel)]="regPassword" name="password" type="password" required autocomplete="new-password"
-                             class="tc-input-sm w-full" placeholder="Minimo 6 caratteri">
-                    </div>
-                    <div>
-                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Telefono</label>
-                      <input [(ngModel)]="regPhone" name="phone" type="tel" autocomplete="tel"
-                             class="tc-input-sm w-full" placeholder="+39 340 1234567">
-                    </div>
-                    <div>
-                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Data di nascita</label>
-                      <input [(ngModel)]="regDob" name="dob" type="date" class="tc-input-sm w-full">
-                    </div>
-                    <div>
-                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Codice fiscale</label>
-                      <input [(ngModel)]="regFiscalCode" name="cf" class="tc-input-sm w-full font-mono uppercase" placeholder="RSSMRA80A01H501Z">
-                    </div>
-                  </div>
-                  @if (authError()) {
-                    <div class="bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold px-4 py-3 rounded-xl">
-                      {{ authError() }}
-                    </div>
-                  }
-                  <button type="submit"
-                          class="w-full py-3.5 rounded-2xl text-white font-bold text-sm transition-opacity hover:opacity-90 mt-2"
-                          style="background-color: var(--brand)">
-                    Crea account
-                  </button>
-                </form>
-                <div class="mt-5 pt-4 border-t border-slate-100 text-center">
-                  <p class="text-sm text-slate-500">
-                    Hai già un account?
-                    <button (click)="switchModal('login')" class="font-bold ml-1" style="color: var(--brand)">Accedi</button>
-                  </p>
-                </div>
-              </div>
-            }
+            <div class="p-6 sm:p-8 overflow-y-auto custom-scrollbar">
 
+              @if (modal() === 'login') {
+                <div class="max-w-md mx-auto">
+                  <div class="text-center mb-6">
+                    <div class="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center text-white text-xl font-extrabold shadow-tc"
+                         style="background-color: var(--brand)">A</div>
+                    <h2 class="text-2xl font-extrabold text-slate-900">Accedi al tuo account</h2>
+                    <p class="text-slate-500 mt-1">Gestisci appuntamenti e documenti</p>
+                  </div>
+                  <form (submit)="doLogin(); $event.preventDefault()" class="space-y-4">
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Email</label>
+                      <input [(ngModel)]="loginEmail" name="email" type="email" required autocomplete="email"
+                             class="tc-input-sm w-full py-2.5" placeholder="mario.rossi@email.com">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Password</label>
+                      <input [(ngModel)]="loginPassword" name="password" type="password" required autocomplete="current-password"
+                             class="tc-input-sm w-full py-2.5" placeholder="••••••••">
+                    </div>
+                    @if (authError()) {
+                      <div class="bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold px-4 py-3 rounded-xl">
+                        {{ authError() }}
+                      </div>
+                    }
+                    <button type="submit"
+                            class="w-full py-3.5 rounded-2xl text-white font-bold text-base shadow-tc hover:scale-[1.02] transition-transform mt-2"
+                            style="background-color: var(--brand)">
+                      Accedi
+                    </button>
+                  </form>
+                  <div class="mt-6 pt-5 border-t border-slate-100 text-center">
+                    <p class="text-slate-500">
+                      Non hai un account?
+                      <button (click)="switchModal('register')" class="font-bold ml-1 hover:underline" style="color: var(--brand)">Registrati</button>
+                    </p>
+                  </div>
+                </div>
+              }
+
+              @if (modal() === 'register') {
+                <div>
+                  <div class="text-center mb-6">
+                    <div class="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center text-white text-2xl font-extrabold shadow-tc"
+                         style="background-color: var(--brand)">+</div>
+                    <h2 class="text-2xl font-extrabold text-slate-900">Crea il tuo account</h2>
+                    <p class="text-slate-500 mt-1">Prenota, gestisci documenti e molto altro</p>
+                  </div>
+                  <form (submit)="doRegister(); $event.preventDefault()" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 mb-1.5">Nome completo *</label>
+                        <input [(ngModel)]="regName" name="name" required autocomplete="name"
+                               class="tc-input-sm w-full py-2.5" placeholder="Mario Rossi">
+                      </div>
+                      <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 mb-1.5">Email *</label>
+                        <input [(ngModel)]="regEmail" name="email" type="email" required autocomplete="email"
+                               class="tc-input-sm w-full py-2.5" placeholder="mario.rossi@email.com">
+                      </div>
+                      <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 mb-1.5">Password *</label>
+                        <input [(ngModel)]="regPassword" name="password" type="password" required autocomplete="new-password"
+                               class="tc-input-sm w-full py-2.5" placeholder="Minimo 6 caratteri">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1.5">Telefono</label>
+                        <input [(ngModel)]="regPhone" name="phone" type="tel" autocomplete="tel"
+                               class="tc-input-sm w-full py-2.5" placeholder="+39 340 1234567">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1.5">Data di nascita</label>
+                        <input [(ngModel)]="regDob" name="dob" type="date" class="tc-input-sm w-full py-2.5">
+                      </div>
+                      <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 mb-1.5">Codice fiscale</label>
+                        <input [(ngModel)]="regFiscalCode" name="cf" class="tc-input-sm w-full py-2.5 font-mono uppercase" placeholder="RSSMRA80A01H501Z">
+                      </div>
+                    </div>
+                    @if (authError()) {
+                      <div class="bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold px-4 py-3 rounded-xl mt-2">
+                        {{ authError() }}
+                      </div>
+                    }
+                    <button type="submit"
+                            class="w-full py-3.5 rounded-2xl text-white font-bold text-base shadow-tc hover:scale-[1.02] transition-transform mt-4"
+                            style="background-color: var(--brand)">
+                      Crea account
+                    </button>
+                  </form>
+                  <div class="mt-6 pt-5 border-t border-slate-100 text-center">
+                    <p class="text-slate-500">
+                      Hai già un account?
+                      <button (click)="switchModal('login')" class="font-bold ml-1 hover:underline" style="color: var(--brand)">Accedi</button>
+                    </p>
+                  </div>
+                </div>
+              }
+
+            </div>
           </div>
         </div>
       }
 
-      <!-- ── Sticky Header ────────────────────────────────────────────────── -->
-      <header class="sticky top-9 z-40 bg-white border-b border-slate-200 shadow-sm">
-        <div class="flex items-center gap-2 sm:gap-3 px-4 py-3 max-w-4xl mx-auto w-full">
-          <!-- Logo / name -->
-          <div class="flex items-center gap-3 flex-1 min-w-0">
+      <header class="sticky top-9 z-40 bg-white border-b border-slate-200 shadow-sm relative">
+        <div class="flex items-center justify-between px-4 py-3 max-w-4xl mx-auto w-full">
+
+          <div class="flex items-center gap-3 min-w-0">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow-tc flex-shrink-0"
                  style="background-color: var(--brand)">
               <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -145,65 +168,115 @@ type AuthModal = 'login' | 'register' | null;
             </div>
           </div>
 
-          <!-- Queue pill -->
-          <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-full
-                      border border-slate-200 flex-shrink-0 text-xs font-semibold text-slate-600">
-            <div class="w-1.5 h-1.5 rounded-full animate-pulse"
-                 [class]="queueEnabled() ? 'bg-amber-400' : 'bg-slate-300'"></div>
-            {{ waitingCount() }} in attesa
-          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
 
-          <!-- Auth buttons or user chip -->
-          @if (currentUser()) {
-            <a [routerLink]="['/p', slug, 'area-personale']"
-               class="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold no-underline transition-colors flex-shrink-0"
-               style="border-color: var(--brand); color: var(--brand)">
-              <div class="w-5 h-5 rounded-full text-white text-[10px] font-extrabold flex items-center justify-center flex-shrink-0"
-                   style="background-color: var(--brand)">
-                {{ currentUser()!.name.charAt(0).toUpperCase() }}
+            <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-full
+                        border border-slate-200 flex-shrink-0 text-xs font-semibold text-slate-600">
+              <div class="w-1.5 h-1.5 rounded-full animate-pulse"
+                   [class]="queueEnabled() ? 'bg-amber-400' : 'bg-slate-300'"></div>
+              {{ waitingCount() }} in attesa
+            </div>
+
+            <div class="hidden sm:flex items-center gap-1.5">
+              @if (currentUser()) {
+                <a [routerLink]="['/p', slug, 'area-personale']"
+                   class="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold no-underline transition-colors flex-shrink-0"
+                   style="border-color: var(--brand); color: var(--brand)">
+                  <div class="w-5 h-5 rounded-full text-white text-[10px] font-extrabold flex items-center justify-center flex-shrink-0"
+                       style="background-color: var(--brand)">
+                    {{ currentUser()!.name.charAt(0).toUpperCase() }}
+                  </div>
+                  <span>{{ currentUser()!.name.split(' ')[0] }}</span>
+                </a>
+              } @else {
+                <button (click)="openModal('login')"
+                        class="px-3 py-1.5 rounded-full border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+                  Login
+                </button>
+                <button (click)="openModal('register')"
+                        class="px-3 py-1.5 rounded-full text-xs font-bold text-white transition-opacity hover:opacity-90"
+                        style="background-color: var(--brand)">
+                  Registrati
+                </button>
+              }
+            </div>
+
+            @if (queueEnabled()) {
+              <a [routerLink]="['/p', slug, 'coda']"
+                 class="flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 py-2 text-white
+                        text-xs sm:text-sm font-bold rounded-full shadow-tc hover:opacity-90
+                        transition-all hover:scale-105 no-underline"
+                 style="background-color: var(--brand)">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span class="hidden sm:inline">Prendi numero</span>
+                <span class="sm:hidden">Numero</span>
+              </a>
+            } @else {
+              <div class="flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-slate-100
+                          text-slate-400 text-xs sm:text-sm font-bold rounded-full cursor-not-allowed">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 115.636 5.636m12.728 12.728L5.636 5.636"/>
+                </svg>
+                <span class="hidden sm:inline">Coda chiusa</span>
+                <span class="sm:hidden">Chiusa</span>
               </div>
-              <span class="hidden sm:inline">{{ currentUser()!.name.split(' ')[0] }}</span>
-            </a>
-          } @else {
-            <div class="flex items-center gap-1.5 flex-shrink-0">
-              <button (click)="openModal('login')"
-                      class="px-3 py-1.5 rounded-full border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
-                Login
-              </button>
-              <button (click)="openModal('register')"
-                      class="px-3 py-1.5 rounded-full text-xs font-bold text-white transition-opacity hover:opacity-90"
-                      style="background-color: var(--brand)">
-                Registrati
-              </button>
-            </div>
-          }
+            }
 
-          <!-- CTA button -->
-          @if (queueEnabled()) {
-            <a [routerLink]="['/p', slug, 'coda']"
-               class="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 text-white
-                      text-sm font-bold rounded-full shadow-tc hover:opacity-90
-                      transition-all hover:scale-105 no-underline"
-               style="background-color: var(--brand)">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            <button (click)="mobileMenuOpen.set(!mobileMenuOpen())"
+                    class="sm:hidden p-1.5 -mr-1 text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                @if (mobileMenuOpen()) {
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                } @else {
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                }
               </svg>
-              <span class="hidden sm:inline">Prendi numero</span>
-              <span class="sm:hidden">Numero</span>
-            </a>
-          } @else {
-            <div class="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-slate-100
-                        text-slate-400 text-sm font-bold rounded-full cursor-not-allowed">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 115.636 5.636m12.728 12.728L5.636 5.636"/>
-              </svg>
-              <span class="hidden sm:inline">Coda chiusa</span>
-            </div>
-          }
+            </button>
+
+          </div>
         </div>
+
+        @if (mobileMenuOpen()) {
+          <div class="sm:hidden absolute top-full left-0 w-full bg-white border-b border-slate-200 shadow-xl animate-fade-in z-50">
+            <div class="px-4 py-4 flex flex-col gap-3">
+
+              <div class="flex items-center gap-1.5 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 w-full justify-center">
+                <div class="w-1.5 h-1.5 rounded-full animate-pulse"
+                     [class]="queueEnabled() ? 'bg-amber-400' : 'bg-slate-300'"></div>
+                {{ waitingCount() }} persone in attesa
+              </div>
+
+              @if (currentUser()) {
+                <a [routerLink]="['/p', slug, 'area-personale']"
+                   (click)="mobileMenuOpen.set(false)"
+                   class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl border font-bold no-underline transition-colors"
+                   style="border-color: var(--brand); color: var(--brand)">
+                  <div class="w-6 h-6 rounded-full text-white text-[10px] font-extrabold flex items-center justify-center"
+                       style="background-color: var(--brand)">
+                    {{ currentUser()!.name.charAt(0).toUpperCase() }}
+                  </div>
+                  <span>Area Personale ({{ currentUser()!.name.split(' ')[0] }})</span>
+                </a>
+              } @else {
+                <div class="grid grid-cols-2 gap-2">
+                  <button (click)="openModal('login'); mobileMenuOpen.set(false)"
+                          class="px-4 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+                    Accedi
+                  </button>
+                  <button (click)="openModal('register'); mobileMenuOpen.set(false)"
+                          class="px-4 py-3 rounded-xl font-bold text-white transition-opacity hover:opacity-90"
+                          style="background-color: var(--brand)">
+                    Registrati
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        }
       </header>
 
-      <!-- ── Site Builder Blocks (Vetrina) ─────────────────────────────────── -->
       @if (siteBlocks().length > 0) {
         <main class="flex-shrink-0 animate-fade-in">
           @for (block of siteBlocks(); track block.id) {
@@ -214,13 +287,11 @@ type AuthModal = 'login' | 'register' | null;
         </main>
       }
 
-      <!-- ── Queue Actions Section ─────────────────────────────────────────── -->
       <section id="prenota"
                class="flex-shrink-0 px-5 py-8 sm:py-12"
                style="background: linear-gradient(135deg, var(--brand-light) 0%, #f8f9ff 100%); border-top: 1px solid rgba(99,102,241,0.12)">
         <div class="max-w-md mx-auto">
 
-          <!-- Queue status card -->
           <div class="bg-white/90 backdrop-blur rounded-2xl px-5 py-4 border shadow-card mb-6 animate-slide-in-up"
                style="border-color: rgba(99,102,241,0.15)">
             <p class="text-xs font-black text-slate-400 uppercase tracking-widest text-center mb-3">
@@ -302,7 +373,6 @@ type AuthModal = 'login' | 'register' | null;
               </a>
             }
 
-            <!-- Area personale CTA -->
             @if (currentUser()) {
               <a [routerLink]="['/p', slug, 'area-personale']"
                  class="flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm
@@ -329,7 +399,6 @@ type AuthModal = 'login' | 'register' | null;
         </div>
       </section>
 
-      <!-- ── Footer ─────────────────────────────────────────────────────────── -->
       <footer class="flex-shrink-0 bg-slate-900 py-6 px-5">
         <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <p class="text-xs text-white/40 font-medium text-center sm:text-left">
@@ -363,17 +432,20 @@ export class PatientLandingComponent {
 
   readonly currentUser = this.authService.currentUser;
 
-  readonly waitingCount    = computed(() => this.mockData.waitingQueue().length);
-  readonly inCorsoCount    = computed(() => this.mockData.inCorsoQueue().length);
+  readonly waitingCount = computed(() => this.mockData.waitingQueue().length);
+  readonly inCorsoCount = computed(() => this.mockData.inCorsoQueue().length);
   readonly estimatedMinutes = computed(() => this.mockData.waitingQueue().length * 15 + 5);
-  readonly queueEnabled    = computed(() => this.mockData.queueEnabled());
-  readonly bookingEnabled  = computed(() => this.mockData.bookingEnabled());
+  readonly queueEnabled = computed(() => this.mockData.queueEnabled());
+  readonly bookingEnabled = computed(() => this.mockData.bookingEnabled());
 
   readonly siteBlocks = computed((): SiteBlock[] => {
     return this.mockData.getSitePage(this.slug).blocks
       .filter(b => !b.disabled)
       .sort((a, b) => a.order - b.order);
   });
+
+  // Mobile menu state
+  readonly mobileMenuOpen = signal<boolean>(false);
 
   // Auth modal state
   readonly modal = signal<AuthModal>(null);
@@ -390,6 +462,20 @@ export class PatientLandingComponent {
   regPhone = '';
   regDob = '';
   regFiscalCode = '';
+
+  constructor() {
+    // Effetto reattivo per bloccare lo scorrimento del background quando il modale è aperto
+    effect(() => {
+      const isOpen = this.modal() !== null;
+      if (typeof document !== 'undefined') {
+        if (isOpen) {
+          document.body.style.overflow = 'hidden';
+        } else {
+          document.body.style.overflow = '';
+        }
+      }
+    });
+  }
 
   openModal(m: AuthModal): void {
     this.authError.set('');

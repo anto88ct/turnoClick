@@ -65,17 +65,17 @@ const BOT_FAQ: { q: string; steps: string[] }[] = [
       @if (!open()) {
         <button
           (click)="toggleOpen()"
-          class="fixed bottom-6 right-6 z-[200] flex items-center gap-2.5
-                 px-5 py-3.5 rounded-2xl shadow-2xl
-                 text-white text-sm font-extrabold tracking-wide
-                 transition-all duration-200 hover:scale-105 active:scale-95"
+          class="fixed bottom-6 right-6 z-[200] flex items-center justify-center gap-2.5
+                p-3 sm:px-5 sm:py-3.5 rounded-full sm:rounded-2xl shadow-2xl
+                text-white text-sm font-extrabold tracking-wide
+                transition-all duration-200 hover:scale-105 active:scale-95"
           style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-                 box-shadow: 0 8px 32px rgba(99,102,241,0.45)">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                box-shadow: 0 8px 32px rgba(99,102,241,0.45)">
+          <svg class="w-6 h-6 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          HAI BISOGNO D'AIUTO?
+          <span class="hidden sm:inline">HAI BISOGNO D'AIUTO?</span>
         </button>
       }
 

@@ -10,13 +10,12 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { path: '/dashboard',              label: 'Panoramica',      icon: 'home',     exact: true },
-  { path: '/dashboard/coda',         label: 'Coda live',       icon: 'queue' },
-  { path: '/dashboard/inserimento',  label: 'Inserimento',     icon: 'add' },
-  { path: '/dashboard/statistiche',  label: 'Statistiche',     icon: 'chart' },
-  { path: '/dashboard/archivio',     label: 'Archivio',        icon: 'archive' },
-  { path: '/dashboard/configurazione', label: 'Configurazione', icon: 'settings' },
-  { path: '/studio',                   label: 'Admin Studio',   icon: 'studio'   },
+  { path: '/dashboard',             label: 'Panoramica',  icon: 'home',    exact: true },
+  { path: '/dashboard/coda',        label: 'Coda live',   icon: 'queue' },
+  { path: '/dashboard/inserimento', label: 'Inserimento', icon: 'add' },
+  { path: '/dashboard/clienti',     label: 'Clienti',     icon: 'users' },
+  { path: '/dashboard/statistiche', label: 'Statistiche', icon: 'chart' },
+  { path: '/dashboard/archivio',    label: 'Archivio',    icon: 'archive' },
 ];
 
 @Component({
@@ -24,7 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   standalone: true,
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
   template: `
-    <div class="flex h-[100dvh] bg-tc-surface overflow-hidden">
+    <div class="flex h-[calc(100dvh-2.25rem)] bg-tc-surface overflow-hidden">
       <!-- Sidebar -->
       <aside
         [class]="sidebarOpen() ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
@@ -66,7 +65,7 @@ const NAV_ITEMS: NavItem[] = [
               {{ item.label }}
               @if (item.icon === 'queue') {
                 <span class="ml-auto bg-tc-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                  {{ waitingCount() }}
+                  {{ waitingCount().length }}
                 </span>
               }
             </a>
@@ -178,6 +177,10 @@ export class DashboardShellComponent {
                  <path stroke-linecap="round" stroke-linejoin="round"
                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                </svg>`,
+      users: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+              </svg>`,
     };
     return icons[name] ?? icons['home'];
   }

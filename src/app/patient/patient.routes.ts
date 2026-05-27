@@ -21,4 +21,9 @@ export const patientRoutes: Routes = [
     loadComponent: () =>
       import('./book-appointment/book-appointment.component').then(m => m.BookAppointmentComponent),
   },
+  {
+    path: ':slug/totem',
+    loadComponent: () =>
+      import('./totem/totem.component').then(m => m.TotemComponent),
+  },
 ];

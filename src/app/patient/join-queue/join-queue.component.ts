@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MockDataService } from '../../core/services/mock-data.service';
@@ -25,107 +25,136 @@ const TIPO_OPTIONS: { value: RequestType; label: string; emoji: string }[] = [
       <header class="flex items-center gap-3 px-5 pt-6 pb-4">
         <a [routerLink]="['/p', slug]"
            class="w-10 h-10 rounded-xl bg-white/80 flex items-center justify-center shadow-card
-                  text-tc-700 hover:bg-white transition-colors">
+                  hover:bg-white transition-colors"
+           style="color: var(--brand)">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
           </svg>
         </a>
         <div>
-          <h1 class="text-lg font-extrabold text-tc-900">Mettiti in coda</h1>
-          <p class="text-xs text-tc-700/70">Studio Medico Dott. Rossi</p>
+          <h1 class="text-lg font-extrabold text-slate-900">Mettiti in coda</h1>
+          <p class="text-xs text-slate-500">Studio Medico Dott. Rossi</p>
         </div>
       </header>
 
-      <div class="flex-1 px-5 pb-8 flex flex-col gap-6">
-        <!-- Queue info -->
-        <div class="bg-tc-500 text-white rounded-2xl px-5 py-4 flex items-center gap-4">
-          <div class="text-center">
-            <div class="text-3xl font-extrabold">{{ waitingCount() }}</div>
-            <div class="text-xs font-medium opacity-80">In attesa</div>
+      @if (!queueEnabled()) {
+        <!-- Queue disabled state -->
+        <div class="flex-1 px-5 pb-8 flex flex-col items-center justify-center gap-6 text-center animate-fade-in">
+          <div class="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto">
+            <svg class="w-10 h-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
           </div>
-          <div class="flex-1 text-sm font-medium opacity-90">
-            Ti posizioneremo
-            <strong class="font-extrabold opacity-100">al numero {{ waitingCount() + 1 }}</strong>
-            con un tempo stimato di
-            <strong class="font-extrabold opacity-100">~{{ estimatedWait() }} minuti</strong>
+          <div>
+            <h2 class="text-xl font-extrabold text-slate-800 mb-2">Coda temporaneamente sospesa</h2>
+            <p class="text-slate-500 text-sm leading-relaxed max-w-xs">
+              Lo studio ha sospeso la coda digitale. Contatta direttamente lo studio per maggiori informazioni.
+            </p>
           </div>
+          <a [routerLink]="['/p', slug]"
+             class="px-6 py-3 rounded-2xl text-white font-bold text-sm shadow-tc transition-all hover:opacity-90 no-underline"
+             style="background-color: var(--brand)">
+            Torna alla pagina studio
+          </a>
         </div>
-
-        <!-- Tipo visita -->
-        <div>
-          <label class="block text-sm font-bold text-slate-700 mb-3">
-            Motivo della visita
-          </label>
-          <div class="grid grid-cols-2 gap-2.5">
-            @for (opt of tipoOptions; track opt.value) {
-              <button
-                type="button"
-                (click)="selectedTipo.set(opt.value)"
-                [class]="selectedTipo() === opt.value
-                  ? 'bg-tc-500 text-white border-2 border-tc-500 shadow-tc'
-                  : 'bg-white text-slate-700 border-2 border-tc-border hover:border-tc-300'"
-                class="flex items-center gap-3 px-4 py-3.5 rounded-2xl font-semibold text-sm
-                       transition-all duration-150 active:scale-95"
-              >
-                <span class="text-xl">{{ opt.emoji }}</span>
-                <span>{{ opt.label }}</span>
-              </button>
-            }
+      } @else {
+        <div class="flex-1 px-5 pb-8 flex flex-col gap-6">
+          <!-- Queue info -->
+          <div class="text-white rounded-2xl px-5 py-4 flex items-center gap-4 shadow-tc animate-bounce-in"
+               style="background-color: var(--brand)">
+            <div class="text-center">
+              <div class="text-3xl font-extrabold">{{ waitingCount() }}</div>
+              <div class="text-xs font-medium opacity-80">In attesa</div>
+            </div>
+            <div class="flex-1 text-sm font-medium opacity-90">
+              Ti posizioneremo
+              <strong class="font-extrabold opacity-100">al numero {{ waitingCount() + 1 }}</strong>
+              con un tempo stimato di
+              <strong class="font-extrabold opacity-100">~{{ estimatedWait() }} minuti</strong>
+            </div>
           </div>
-        </div>
 
-        <!-- Telefono -->
-        <div>
-          <label class="block text-sm font-bold text-slate-700 mb-2" for="phone">
-            Il tuo numero di telefono
-            <span class="text-tc-500 ml-1">*</span>
-          </label>
-          <input
-            id="phone"
-            type="tel"
-            class="tc-input"
-            placeholder="+39 333 123 4567"
-            [(ngModel)]="phone"
-            inputmode="tel"
-          />
-          <p class="text-xs text-slate-500 mt-2">
-            Riceverai un SMS quando sarà quasi il tuo turno
+          <!-- Tipo visita -->
+          <div class="animate-slide-in-up">
+            <label class="block text-sm font-bold text-slate-700 mb-3">
+              Motivo della visita
+            </label>
+            <div class="grid grid-cols-2 gap-2.5">
+              @for (opt of tipoOptions; track opt.value) {
+                <button
+                  type="button"
+                  (click)="selectedTipo.set(opt.value)"
+                  [class]="selectedTipo() === opt.value
+                    ? 'text-white border-2 shadow-tc'
+                    : 'bg-white text-slate-700 border-2 border-tc-border hover:border-opacity-50'"
+                  [style]="selectedTipo() === opt.value
+                    ? 'background-color: var(--brand); border-color: var(--brand)'
+                    : ''"
+                  class="flex items-center gap-3 px-4 py-3.5 rounded-2xl font-semibold text-sm
+                         transition-all duration-150 active:scale-95"
+                >
+                  <span class="text-xl">{{ opt.emoji }}</span>
+                  <span>{{ opt.label }}</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Telefono -->
+          <div class="animate-slide-in-up" style="animation-delay: 0.05s">
+            <label class="block text-sm font-bold text-slate-700 mb-2" for="phone">
+              Il tuo numero di telefono
+              <span class="ml-1" style="color: var(--brand)">*</span>
+            </label>
+            <input
+              id="phone"
+              type="tel"
+              class="tc-input"
+              placeholder="+39 333 123 4567"
+              [(ngModel)]="phone"
+              inputmode="tel"
+            />
+            <p class="text-xs text-slate-500 mt-2">
+              Riceverai un SMS quando sarà quasi il tuo turno
+            </p>
+          </div>
+
+          <!-- Nome (opzionale) -->
+          <div class="animate-slide-in-up" style="animation-delay: 0.08s">
+            <label class="block text-sm font-bold text-slate-700 mb-2" for="name">
+              Nome e cognome
+              <span class="text-xs font-normal text-slate-400 ml-1">(facoltativo)</span>
+            </label>
+            <input
+              id="name"
+              type="text"
+              class="tc-input"
+              placeholder="Es. Mario Rossi"
+              [(ngModel)]="patientName"
+            />
+          </div>
+
+          <!-- CTA -->
+          @if (error()) {
+            <div class="bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 text-rose-700 text-sm font-semibold animate-slide-in-up">
+              {{ error() }}
+            </div>
+          }
+
+          <div class="animate-slide-in-up" style="animation-delay: 0.12s">
+            <tc-big-button variant="green" (clicked)="submit()">
+              <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+              <span>Conferma e mettiti in coda</span>
+            </tc-big-button>
+          </div>
+
+          <p class="text-center text-xs text-slate-400 leading-relaxed">
+            Accettando, autorizzi il trattamento del tuo numero di telefono per l'invio di notifiche SMS relative alla tua prenotazione.
           </p>
         </div>
-
-        <!-- Nome (opzionale) -->
-        <div>
-          <label class="block text-sm font-bold text-slate-700 mb-2" for="name">
-            Nome e cognome
-            <span class="text-xs font-normal text-slate-400 ml-1">(facoltativo)</span>
-          </label>
-          <input
-            id="name"
-            type="text"
-            class="tc-input"
-            placeholder="Es. Mario Rossi"
-            [(ngModel)]="patientName"
-          />
-        </div>
-
-        <!-- CTA -->
-        @if (error()) {
-          <div class="bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 text-rose-700 text-sm font-semibold">
-            {{ error() }}
-          </div>
-        }
-
-        <tc-big-button variant="green" (clicked)="submit()">
-          <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-          </svg>
-          <span>Conferma e mettiti in coda</span>
-        </tc-big-button>
-
-        <p class="text-center text-xs text-slate-400 leading-relaxed">
-          Accettando, autorizzi il trattamento del tuo numero di telefono per l'invio di notifiche SMS relative alla tua prenotazione.
-        </p>
-      </div>
+      }
     </div>
   `,
 })
@@ -134,7 +163,8 @@ export class JoinQueueComponent {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  readonly tipoOptions = TIPO_OPTIONS;
+  readonly tipoOptions  = TIPO_OPTIONS;
+  readonly queueEnabled = computed(() => this.mockData.queueEnabled());
 
   phone = '';
   patientName = '';

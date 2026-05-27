@@ -32,6 +32,11 @@ export const dashboardRoutes: Routes = [
           import('./archive/archive.component').then(m => m.ArchiveComponent),
       },
       {
+        path: 'clienti',
+        loadComponent: () =>
+          import('../pages/clients/clients-list.component').then(m => m.ClientsListComponent),
+      },
+      {
         path: 'configurazione',
         loadComponent: () =>
           import('./configuration/configuration.component').then(m => m.ConfigurationComponent),

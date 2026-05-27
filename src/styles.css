@@ -1,6 +1,20 @@
+@import "bootstrap/dist/css/bootstrap.min.css";
+@import "primeng/resources/themes/lara-light-blue/theme.css";
+@import "primeng/resources/primeng.min.css";
+@import "primeicons/primeicons.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── CSS Custom Properties (brand theming) ────────────────────────── */
+:root {
+  --brand:        #6366f1;
+  --brand-dark:   #4f46e5;
+  --brand-light:  #eef2ff;
+  --brand-muted:  rgba(99, 102, 241, 0.12);
+  --brand-glow:   rgba(99, 102, 241, 0.25);
+}
 
 @layer base {
   * {
@@ -20,7 +34,7 @@
 
 @layer components {
   .tc-patient-bg {
-    background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 50%, #a7f3d0 100%);
+    background: linear-gradient(145deg, #f0f4ff 0%, #e8edff 50%, #dde6ff 100%);
     min-height: 100vh;
   }
 
@@ -58,7 +72,8 @@
   }
 
   .dashboard-card {
-    @apply bg-white rounded-2xl shadow-card p-5 border border-tc-border/50;
+    @apply bg-white rounded-2xl shadow-card p-5 border border-tc-border/50
+           transition-shadow duration-200 hover:shadow-card-hover;
   }
 
   .page-header {
@@ -67,6 +82,22 @@
 
   .page-subheader {
     @apply text-sm text-slate-500 mt-0.5;
+  }
+
+  /* Brand-colored button using CSS variable */
+  .btn-brand {
+    background-color: var(--brand);
+    color: white;
+    transition: background-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 14px var(--brand-glow);
+  }
+  .btn-brand:hover {
+    background-color: var(--brand-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px var(--brand-glow);
+  }
+  .btn-brand:active {
+    transform: translateY(0);
   }
 }
 
@@ -82,6 +113,48 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  .tc-checkbox {
+    @apply w-4 h-4 rounded accent-tc-500 cursor-pointer;
+  }
+
+  .shadow-tc {
+    box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.3);
+  }
+
+  /* Brand color dynamic utilities */
+  .brand-bg        { background-color: var(--brand) !important; }
+  .brand-bg-light  { background-color: var(--brand-light) !important; }
+  .brand-text      { color: var(--brand) !important; }
+  .brand-border    { border-color: var(--brand) !important; }
+  .brand-shadow    { box-shadow: 0 4px 20px var(--brand-glow) !important; }
+
+  /* Shimmer loading */
+  .shimmer {
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+}
+
+/* Prose overrides for site builder text blocks */
+.prose h1 { @apply text-3xl font-extrabold text-slate-900 mb-4 mt-6; }
+.prose h2 { @apply text-2xl font-bold text-slate-800 mb-3 mt-5; }
+.prose h3 { @apply text-xl font-bold text-slate-800 mb-2 mt-4; }
+.prose p  { @apply mb-3; }
+.prose ul { @apply list-disc list-inside mb-3 space-y-1; }
+.prose ol { @apply list-decimal list-inside mb-3 space-y-1; }
+.prose strong { @apply font-bold; }
+.prose em { @apply italic; }
+.prose blockquote { @apply border-l-4 border-tc-400 pl-4 italic text-slate-600 my-4; }
+
+/* Fix animation flash: elementi con delay partono dallo stato iniziale (opacity:0) */
+.animate-slide-in-up,
+.animate-slide-in-down,
+.animate-fade-in,
+.animate-bounce-in,
+.animate-scale-in {
+  animation-fill-mode: both;
 }
 
 /* CDK drag preview */
@@ -118,4 +191,18 @@
 @keyframes numberFlip {
   0%   { transform: translateY(-6px); opacity: 0; }
   100% { transform: translateY(0);    opacity: 1; }
+}
+
+/* Queue disabled overlay */
+.queue-disabled-overlay {
+  position: relative;
+  overflow: hidden;
+}
+.queue-disabled-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(2px);
+  pointer-events: all;
 }

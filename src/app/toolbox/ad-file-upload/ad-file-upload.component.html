@@ -1,0 +1,40 @@
+<div
+  class="upload-dropzone d-flex flex-column align-items-center justify-content-center border-2 border-dashed p-4 text-center cursor-pointer transition-all rounded-3"
+  [class.drag-over]="isDragOver()"
+  [class.disabled]="disabled"
+  (click)="triggerSelect()"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave($event)"
+  (drop)="onDrop($event)"
+>
+  <input
+    #fileInput
+    type="file"
+    class="d-none"
+    [accept]="accept"
+    [multiple]="multiple"
+    [disabled]="disabled"
+    (change)="onFileChange($event)"
+  />
+
+  <div class="upload-icon-container mb-3 bg-tc-50 text-tc-600 rounded-circle d-flex align-items-center justify-content-center">
+    <i class="fa-solid fa-cloud-arrow-up fa-2x"></i>
+  </div>
+
+  <h5 class="text-slate-800 font-bold mb-1">
+    Carica un file
+  </h5>
+  <p class="text-slate-500 small mb-0 px-3">
+    Trascina qui i tuoi documenti o <span class="text-tc-600 font-bold text-decoration-underline">sfoglia</span>
+  </p>
+  <p class="text-slate-400 x-small mt-1 mb-0">
+    PDF, PNG, JPG o JPEG fino a 10MB
+  </p>
+</div>
+
+@if (errorMessage()) {
+  <div class="text-rose-500 small font-medium mt-2 text-center">
+    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+    {{ errorMessage() }}
+  </div>
+}

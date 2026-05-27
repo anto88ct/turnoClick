@@ -1,0 +1,46 @@
+::ng-deep {
+  .ad-dialog-custom {
+    border-radius: 1rem !important;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
+    border: none !important;
+
+    .p-dialog-header {
+      background-color: #ffffff !important;
+      border-bottom: 1px solid #f1f5f9 !important;
+      padding: 1.5rem !important;
+      border-top-left-radius: 1rem !important;
+      border-top-right-radius: 1rem !important;
+      
+      .p-dialog-title {
+        font-weight: 800 !important;
+        font-size: 1.25rem !important;
+        color: #0f172a !important;
+      }
+
+      .p-dialog-header-icon {
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+        border-radius: 0.5rem !important;
+        color: #64748b !important;
+        transition: all 0.15s ease-in-out;
+
+        &:hover {
+          background-color: #f1f5f9 !important;
+          color: #0f172a !important;
+        }
+      }
+    }
+
+    .p-dialog-content {
+      background-color: #ffffff !important;
+      padding: 1.5rem !important;
+      border-bottom-left-radius: 1rem !important;
+      border-bottom-right-radius: 1rem !important;
+    }
+  }
+
+  .p-dialog-mask {
+    background-color: rgba(15, 23, 42, 0.4) !important;
+    backdrop-filter: blur(4px) !important;
+  }
+}

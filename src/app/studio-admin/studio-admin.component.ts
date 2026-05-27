@@ -1,8 +1,11 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TcButtonComponent } from '../shared/tc-button/tc-button.component';
+import { SiteBuilderComponent } from './site-builder/site-builder.component';
+import { MockDataService } from '../core/services/mock-data.service';
 
-type TabId = 'identita' | 'medici' | 'stanze' | 'richieste' | 'orari' | 'sms' | 'qrcode' | 'prenotazione';
+type TabId = 'identita' | 'medici' | 'stanze' | 'richieste' | 'orari' | 'sms' | 'qrcode' | 'prenotazione' | 'sito-vetrina';
 
 const DAYS_IT = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
 const TIPI_NOMI = ['Visita', 'Ricetta', 'Certificato', 'Controllo', 'Ritiro referti', 'Altro'];
@@ -26,6 +29,7 @@ interface Tab { id: TabId; label: string; shortLabel: string; }
 
 const TABS: Tab[] = [
   { id: 'identita',     label: 'Identità & Branding',  shortLabel: 'Brand'     },
+  { id: 'sito-vetrina', label: 'Sito Vetrina',          shortLabel: 'Sito'      },
   { id: 'medici',       label: 'Medici & Operatori',    shortLabel: 'Medici'    },
   { id: 'stanze',       label: 'Stanze & Ambulatori',   shortLabel: 'Stanze'    },
   { id: 'richieste',    label: 'Tipi di Richiesta',     shortLabel: 'Richieste' },
@@ -80,9 +84,9 @@ const SMS_VARS = ['{codice}', '{nome_studio}', '{persone_attesa}', '{tempo_stima
 @Component({
   selector: 'app-studio-admin',
   standalone: true,
-  imports: [FormsModule, TcButtonComponent],
+  imports: [FormsModule, RouterLink, TcButtonComponent, SiteBuilderComponent],
   template: `
-<div class="flex h-[100dvh] bg-slate-50 overflow-hidden">
+<div class="flex h-[calc(100dvh-2.25rem)] bg-slate-50 overflow-hidden">
 
   <!-- ── Desktop sidebar ─────────────────────────────────────────────── -->
   <aside class="hidden lg:flex flex-col w-64 bg-tc-900 flex-shrink-0 overflow-y-auto no-scrollbar">
@@ -172,7 +176,15 @@ const SMS_VARS = ['{codice}', '{nome_studio}', '{persone_attesa}', '{tempo_stima
       </div>
     </div>
 
-    <!-- Scrollable content -->
+    <!-- Site Builder (full-height, no scroll wrapper) -->
+    @if (activeTab() === 'sito-vetrina') {
+      <div class="flex-1 overflow-hidden">
+        <app-site-builder></app-site-builder>
+      </div>
+    }
+
+    <!-- Scrollable content (all other tabs) -->
+    @if (activeTab() !== 'sito-vetrina') {
     <div class="flex-1 overflow-y-auto">
       <div class="max-w-3xl mx-auto px-4 py-5 lg:px-6 lg:py-6 space-y-5">
 
@@ -234,8 +246,23 @@ const SMS_VARS = ['{codice}', '{nome_studio}', '{persone_attesa}', '{tempo_stima
                 <div>
                   <label class="block text-xs font-bold text-slate-500 mb-1.5">Colore brand</label>
                   <div class="flex items-center gap-2">
-                    <input type="color" value="#10b981" class="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-1"/>
-                    <input type="text" class="tc-input-sm flex-1 font-mono" value="#10b981"/>
+                    <input type="color" [value]="mockData.brandColor()"
+                           (input)="onBrandColorInput($event)"
+                           (change)="onBrandColorChange($event)"
+                           class="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-1"/>
+                    <input type="text" class="tc-input-sm flex-1 font-mono"
+                           [value]="mockData.brandColor()"
+                           (change)="onBrandColorChange($event)"/>
+                  </div>
+                  <!-- Color presets -->
+                  <div class="flex gap-2 mt-2 flex-wrap">
+                    @for (preset of brandPresets; track preset.hex) {
+                      <button type="button"
+                              (click)="mockData.setBrandColor(preset.hex)"
+                              class="w-7 h-7 rounded-full border-2 border-white shadow transition-transform hover:scale-110 flex-shrink-0"
+                              [style.background]="preset.hex"
+                              [title]="preset.name"></button>
+                    }
                   </div>
                 </div>
                 <div>
@@ -258,49 +285,24 @@ const SMS_VARS = ['{codice}', '{nome_studio}', '{persone_attesa}', '{tempo_stima
               </div>
             </div>
 
-            <!-- Sito vetrina -->
-            <div class="dashboard-card">
-              <div class="flex items-center justify-between mb-4">
-                <div>
-                  <h3 class="text-sm font-extrabold text-slate-700 uppercase tracking-widest">Sito vetrina</h3>
-                  <p class="text-xs text-slate-400 mt-0.5">Immagini visibili nella pagina pubblica</p>
-                </div>
-                <label class="cursor-pointer">
-                  <input type="file" accept="image/*" class="sr-only" (change)="onVetrinaUpload($event)"/>
-                  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl
-                               bg-tc-500 text-white hover:bg-tc-600 transition-all shadow-tc">
-                    + Aggiungi
-                  </span>
-                </label>
-              </div>
-              <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                @for (img of vetrinaImages(); track img.url; let i = $index) {
-                  <div class="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-100"
-                       style="aspect-ratio: 4/3">
-                    <img [src]="img.url" [alt]="img.desc" class="w-full h-full object-cover"/>
-                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity
-                                flex flex-col items-center justify-center gap-2 p-2">
-                      <input type="text" [value]="img.desc"
-                             (input)="updateVetrinaDesc(i, $any($event.target).value)"
-                             class="w-full text-xs text-center bg-white/90 rounded-lg px-2 py-1 font-medium"
-                             placeholder="Descrizione"/>
-                      <button type="button" (click)="removeVetrinaImage(i)"
-                              class="text-xs font-bold text-white bg-rose-500 rounded-lg px-3 py-1">
-                        Rimuovi
-                      </button>
-                    </div>
-                  </div>
-                }
-                <!-- Placeholder add card -->
-                <label class="cursor-pointer flex flex-col items-center justify-center rounded-2xl border-2
-                              border-dashed border-slate-200 hover:border-tc-300 transition-colors text-slate-400
-                              hover:text-tc-500 bg-white" style="aspect-ratio: 4/3">
-                  <input type="file" accept="image/*" class="sr-only" (change)="onVetrinaUpload($event)"/>
-                  <svg class="w-8 h-8 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            <!-- Link rapido al Sito Vetrina -->
+            <div class="dashboard-card bg-gradient-to-r from-tc-50 to-indigo-50 border-tc-200">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-tc-500 flex items-center justify-center flex-shrink-0 shadow-tc">
+                  <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
                   </svg>
-                  <span class="text-xs font-semibold">Aggiungi</span>
-                </label>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <h3 class="font-bold text-slate-900 text-sm">Sito Vetrina</h3>
+                  <p class="text-xs text-slate-500 mt-0.5">Personalizza la pagina pubblica del tuo studio dal tab dedicato.</p>
+                </div>
+                <button type="button" (click)="setTab('sito-vetrina')"
+                        class="flex-shrink-0 px-4 py-2 bg-tc-500 text-white text-xs font-bold rounded-xl shadow-tc
+                               hover:bg-tc-600 transition-colors">
+                  Vai al Sito
+                </button>
               </div>
             </div>
 
@@ -755,7 +757,9 @@ const SMS_VARS = ['{codice}', '{nome_studio}', '{persone_attesa}', '{tempo_stima
                       <tc-button variant="ghost" size="sm">Copia</tc-button>
                     </div>
                   </div>
-                  <tc-button variant="secondary" size="sm">
+                  <a routerLink="/p/studio-demo" target="_blank"
+                     class="inline-flex items-center gap-2 w-full justify-center py-2.5 px-4 rounded-xl
+                            bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-colors no-underline">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round"
                         d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -763,7 +767,16 @@ const SMS_VARS = ['{codice}', '{nome_studio}', '{persone_attesa}', '{tempo_stima
                         d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                     </svg>
                     Anteprima pagina pubblica
-                  </tc-button>
+                  </a>
+                  <a routerLink="/p/studio-demo/totem" target="_blank"
+                     class="inline-flex items-center gap-2 w-full justify-center py-2.5 px-4 rounded-xl
+                            bg-tc-50 hover:bg-tc-100 text-tc-700 text-sm font-semibold transition-colors no-underline border border-tc-200">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <rect x="2" y="3" width="20" height="14" rx="2"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M8 21h8M12 17v4"/>
+                    </svg>
+                    Apri Vista TOTEM (tablet sala d'attesa)
+                  </a>
                 </div>
               </div>
             </div>
@@ -797,7 +810,34 @@ const SMS_VARS = ['{codice}', '{nome_studio}', '{persone_attesa}', '{tempo_stima
         @if (activeTab() === 'prenotazione') {
           <div class="space-y-5 animate-slide-in-up">
 
-            <!-- Master toggle -->
+            <!-- Accesso coda digitale -->
+            <div class="dashboard-card">
+              <div class="flex items-start gap-4">
+                <div class="flex-1">
+                  <h3 class="font-bold text-slate-900">Coda digitale</h3>
+                  <p class="text-sm text-slate-500 mt-0.5">
+                    I pazienti possono mettersi in coda dalla pagina pubblica del tuo studio.
+                  </p>
+                  @if (!mockData.queueEnabled()) {
+                    <div class="mt-2 flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700
+                                text-xs font-semibold rounded-lg border border-rose-200 w-fit">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                      </svg>
+                      Coda disabilitata — i pazienti non possono iscriversi
+                    </div>
+                  }
+                </div>
+                <label class="relative cursor-pointer flex-shrink-0 mt-0.5">
+                  <input type="checkbox" [checked]="mockData.queueEnabled()"
+                         (change)="mockData.setQueueEnabled(!mockData.queueEnabled())" class="sr-only peer"/>
+                  <div class="w-12 h-7 bg-slate-200 peer-checked:bg-tc-500 rounded-full transition-colors"></div>
+                  <div class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Master toggle prenotazione -->
             <div class="dashboard-card">
               <div class="flex items-start gap-4">
                 <div class="flex-1">
@@ -805,17 +845,26 @@ const SMS_VARS = ['{codice}', '{nome_studio}', '{persone_attesa}', '{tempo_stima
                   <p class="text-sm text-slate-500 mt-0.5">
                     I pazienti possono scegliere giorno e orario specifico anziché entrare in coda.
                   </p>
+                  @if (!mockData.bookingEnabled()) {
+                    <div class="mt-2 flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700
+                                text-xs font-semibold rounded-lg border border-rose-200 w-fit">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 115.636 5.636m12.728 12.728L5.636 5.636"/>
+                      </svg>
+                      Prenotazioni disabilitate
+                    </div>
+                  }
                 </div>
                 <label class="relative cursor-pointer flex-shrink-0 mt-0.5">
-                  <input type="checkbox" [checked]="prenotazioneEnabled()"
-                         (change)="prenotazioneEnabled.set(!prenotazioneEnabled())" class="sr-only peer"/>
+                  <input type="checkbox" [checked]="mockData.bookingEnabled()"
+                         (change)="mockData.setBookingEnabled(!mockData.bookingEnabled())" class="sr-only peer"/>
                   <div class="w-12 h-7 bg-slate-200 peer-checked:bg-tc-500 rounded-full transition-colors"></div>
                   <div class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
                 </label>
               </div>
             </div>
 
-            @if (prenotazioneEnabled()) {
+            @if (mockData.bookingEnabled()) {
               <!-- Slot settings -->
               <div class="dashboard-card space-y-4">
                 <h3 class="text-sm font-extrabold text-slate-700 uppercase tracking-widest">Configurazione slot</h3>
@@ -875,20 +924,32 @@ const SMS_VARS = ['{codice}', '{nome_studio}', '{persone_attesa}', '{tempo_stima
         <div class="h-8"></div>
       </div>
     </div>
+    } <!-- end @if activeTab !== sito-vetrina -->
   </div>
 </div>
   `,
 })
 export class StudioAdminComponent {
+  readonly mockData = inject(MockDataService);
+
   readonly tabs = TABS;
   readonly smsVars = SMS_VARS;
 
+  readonly brandPresets = [
+    { hex: '#6366f1', name: 'Indigo (default)' },
+    { hex: '#8b5cf6', name: 'Viola' },
+    { hex: '#3b82f6', name: 'Blu' },
+    { hex: '#06b6d4', name: 'Ciano' },
+    { hex: '#10b981', name: 'Smeraldo' },
+    { hex: '#f59e0b', name: 'Ambra' },
+    { hex: '#ef4444', name: 'Rosso' },
+    { hex: '#ec4899', name: 'Rosa' },
+    { hex: '#1e293b', name: 'Ardesia' },
+  ];
+
   readonly activeTab   = signal<TabId>('identita');
   readonly logoPreview = signal<string | null>(null);
-  readonly vetrinaImages = signal<{ url: string; desc: string }[]>([
-    { url: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400&q=80', desc: "Sala d'attesa" },
-    { url: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=400&q=80', desc: 'Ambulatorio principale' },
-  ]);
+  readonly vetrinaImages = signal<{ url: string; desc: string }[]>([]);
 
   readonly medici  = signal<Medico[]>(INIT_MEDICI.map(m => ({ ...m, availability: m.availability.map(a => ({ ...a })), avgPerType: m.avgPerType.map(t => ({ ...t })) })));
   readonly stanze  = signal<Stanza[]>(INIT_STANZE.map(s => ({ ...s, mediciIds: [...s.mediciIds] })));
@@ -942,6 +1003,18 @@ export class StudioAdminComponent {
 
   getActiveLabel(): string {
     return TABS.find(t => t.id === this.activeTab())?.label ?? '';
+  }
+
+  onBrandColorInput(event: Event): void {
+    const hex = (event.target as HTMLInputElement).value;
+    this.mockData.setBrandColor(hex);
+  }
+
+  onBrandColorChange(event: Event): void {
+    const hex = (event.target as HTMLInputElement).value;
+    if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+      this.mockData.setBrandColor(hex);
+    }
   }
 
   onLogoUpload(event: Event): void {
@@ -1016,6 +1089,10 @@ export class StudioAdminComponent {
       identita: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round"
           d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+      </svg>`,
+      'sito-vetrina': `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
       </svg>`,
       medici: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round"

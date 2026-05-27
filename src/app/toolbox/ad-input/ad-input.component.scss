@@ -1,0 +1,26 @@
+.form-control {
+  border-radius: 0.75rem;
+  border-color: #cbd5e1;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  color: #1e293b;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+
+  &:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+  }
+
+  &.is-invalid {
+    border-color: #f43f5e;
+    
+    &:focus {
+      box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.15);
+    }
+  }
+
+  &.ps-5 {
+    padding-left: 2.75rem !important;
+  }
+}

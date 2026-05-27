@@ -1,0 +1,514 @@
+<div class="container-fluid p-4 max-w-screen-2xl mx-auto">
+  <!-- Top header -->
+  <div class="row align-items-center mb-4">
+    <div class="col-md-6 mb-3 mb-md-0">
+      <h1 class="h2 font-extrabold text-slate-900 mb-1">Archivio Clienti</h1>
+      <p class="text-slate-500 mb-0">Gestione anagrafiche, storico delle visite e allegati medici</p>
+    </div>
+    <div class="col-md-6 d-flex justify-content-md-end gap-2">
+      <div class="search-container flex-grow-1 max-w-sm position-relative">
+        <ad-input
+          [value]="searchQuery()"
+          (valueChange)="searchQuery.set($event)"
+          placeholder="Cerca per nome, telefono, CF..."
+          iconClass="fa-solid fa-magnifying-glass"
+          [disabled]="isLoading()"
+        ></ad-input>
+      </div>
+      <ad-button
+        label="Nuovo Cliente"
+        iconClass="fa-solid fa-user-plus me-1"
+        (onClick)="openNewClientDialog()"
+        variant="primary"
+      ></ad-button>
+    </div>
+  </div>
+
+  <!-- Main Grid -->
+  <div class="row">
+    <!-- Clients List Table -->
+    <div class="col-lg-7 mb-4">
+      <ad-table
+        [value]="filteredClients()"
+        [columns]="tableColumns"
+        [paginator]="true"
+        [rows]="10"
+        [loading]="isLoading()"
+      >
+        <ng-template #rowTemplate let-client>
+          <td class="align-middle">
+            <div class="d-flex align-items-center gap-3">
+              <div class="avatar-circle bg-tc-50 text-tc-600 font-bold d-flex align-items-center justify-content-center">
+                {{ getClientInitials(client.name) }}
+              </div>
+              <div>
+                <span class="font-bold text-slate-900 d-block">{{ client.name }}</span>
+                <span class="x-small text-slate-400">Registrato il {{ formatDate(client.createdAt) }}</span>
+              </div>
+            </div>
+          </td>
+          <td class="align-middle text-slate-600 font-medium">{{ client.phone }}</td>
+          <td class="align-middle text-slate-600 font-medium truncate-email">{{ client.email }}</td>
+          <td class="align-middle text-mono x-small text-slate-500 font-bold">{{ client.fiscalCode }}</td>
+          <td class="align-middle text-end">
+            <ad-button
+              label="Visualizza"
+              iconClass="fa-solid fa-chevron-right me-1"
+              variant="outline-primary"
+              btnClass="btn-sm py-1.5 px-3"
+              (onClick)="selectClient(client)"
+            ></ad-button>
+          </td>
+        </ng-template>
+      </ad-table>
+    </div>
+
+    <!-- Client Detail View -->
+    <div class="col-lg-5">
+      @if (selectedClient(); as client) {
+        <div class="card detail-card border-0 shadow-sm rounded-3">
+          <!-- Client Header info -->
+          <div class="card-header bg-white border-0 pt-4 px-4 pb-2">
+            <div class="d-flex align-items-center gap-3">
+              <div class="avatar-circle-lg bg-tc-500 text-white font-extrabold d-flex align-items-center justify-content-center shadow-sm">
+                {{ getClientInitials(client.name) }}
+              </div>
+              <div class="flex-grow-1 min-w-0">
+                <h3 class="h5 font-extrabold text-slate-900 mb-0.5 truncate">{{ client.name }}</h3>
+                <p class="text-xs text-slate-400 mb-0 font-medium">ID Cliente: <span class="text-mono">{{ client.id }}</span></p>
+                <p class="text-xs text-slate-500 font-semibold mb-0"><i class="fa-solid fa-phone text-tc-500 me-1"></i>{{ client.phone }}</p>
+              </div>
+              <div class="d-flex flex-column gap-1">
+                @if (activeTab() === 'anagrafica') {
+                  <ad-button
+                    [label]="isEditingRegistry() ? 'Annulla' : 'Modifica'"
+                    [iconClass]="isEditingRegistry() ? 'fa-solid fa-xmark me-1' : 'fa-solid fa-pen me-1'"
+                    [variant]="isEditingRegistry() ? 'outline-secondary' : 'outline-primary'"
+                    btnClass="btn-sm py-1 px-2.5"
+                    (onClick)="toggleEditMode()"
+                  ></ad-button>
+                }
+              </div>
+            </div>
+
+            <!-- Tab bar -->
+            <ul class="nav nav-tabs mt-4 border-slate-100">
+              <li class="nav-item">
+                <button
+                  class="nav-link border-0 text-slate-500 font-bold px-3 py-2"
+                  [class.active-tab]="activeTab() === 'anagrafica'"
+                  (click)="activeTab.set('anagrafica'); isEditingRegistry.set(false)"
+                >
+                  <i class="fa-solid fa-id-card me-1.5"></i>Anagrafica
+                </button>
+              </li>
+              <li class="nav-item">
+                <button
+                  class="nav-link border-0 text-slate-500 font-bold px-3 py-2"
+                  [class.active-tab]="activeTab() === 'visite'"
+                  (click)="activeTab.set('visite')"
+                >
+                  <i class="fa-solid fa-calendar-check me-1.5"></i>Visite
+                  <span class="badge bg-slate-100 text-slate-600 rounded-pill ms-1 font-bold">{{ client.visits.length }}</span>
+                </button>
+              </li>
+              <li class="nav-item">
+                <button
+                  class="nav-link border-0 text-slate-500 font-bold px-3 py-2"
+                  [class.active-tab]="activeTab() === 'documenti'"
+                  (click)="activeTab.set('documenti')"
+                >
+                  <i class="fa-solid fa-file-medical me-1.5"></i>Documenti
+                  <span class="badge bg-slate-100 text-slate-600 rounded-pill ms-1 font-bold">{{ client.attachments.length }}</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <div class="card-body p-4 bg-slate-50/50">
+            <!-- TAB 1: ANAGRAFICA -->
+            @if (activeTab() === 'anagrafica') {
+              @if (!isEditingRegistry()) {
+                <div class="d-flex flex-column gap-3 py-2">
+                  <div class="bg-white p-3 rounded-3 border border-slate-100">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider d-block mb-1">Codice Fiscale</span>
+                    <span class="font-extrabold text-mono text-slate-800">{{ client.fiscalCode || 'Non inserito' }}</span>
+                  </div>
+                  <div class="bg-white p-3 rounded-3 border border-slate-100">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider d-block mb-1">Email</span>
+                    <span class="font-semibold text-slate-800">{{ client.email || 'Non inserita' }}</span>
+                  </div>
+                  <div class="bg-white p-3 rounded-3 border border-slate-100">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider d-block mb-1">Data di Nascita</span>
+                    <span class="font-semibold text-slate-800">{{ formatDate(client.birthDate) || 'Non specificata' }}</span>
+                  </div>
+                  <div class="bg-white p-3 rounded-3 border border-slate-100">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider d-block mb-1">Indirizzo Residenza</span>
+                    <span class="font-semibold text-slate-800">{{ client.address || 'Non specificato' }}</span>
+                  </div>
+                </div>
+              } @else {
+                <!-- Edit mode registry form -->
+                <form (ngSubmit)="saveRegistry()" class="d-flex flex-column gap-2">
+                  <ad-input
+                    label="Nome e Cognome"
+                    [value]="editForm.name"
+                    (valueChange)="editForm.name = $event"
+                    [error]="editErrors['name']"
+                    [required]="true"
+                  ></ad-input>
+                  <ad-input
+                    label="Telefono"
+                    [value]="editForm.phone"
+                    (valueChange)="editForm.phone = $event"
+                    [error]="editErrors['phone']"
+                    [required]="true"
+                  ></ad-input>
+                  <ad-input
+                    label="Email"
+                    [value]="editForm.email"
+                    (valueChange)="editForm.email = $event"
+                    [error]="editErrors['email']"
+                    type="email"
+                    [required]="true"
+                  ></ad-input>
+                  <ad-input
+                    label="Codice Fiscale"
+                    [value]="editForm.fiscalCode"
+                    (valueChange)="editForm.fiscalCode = $event"
+                    [error]="editErrors['fiscalCode']"
+                    [required]="true"
+                  ></ad-input>
+                  <ad-input
+                    label="Data di Nascita"
+                    [value]="editForm.birthDate"
+                    (valueChange)="editForm.birthDate = $event"
+                    type="date"
+                  ></ad-input>
+                  <ad-input
+                    label="Indirizzo Residenza"
+                    [value]="editForm.address"
+                    (valueChange)="editForm.address = $event"
+                  ></ad-input>
+
+                  <div class="d-flex gap-2 justify-content-end mt-3">
+                    <ad-button
+                      label="Annulla"
+                      variant="outline-secondary"
+                      type="button"
+                      (onClick)="isEditingRegistry.set(false)"
+                    ></ad-button>
+                    <ad-button
+                      label="Salva Modifiche"
+                      variant="primary"
+                      type="submit"
+                      [loading]="isLoading()"
+                    ></ad-button>
+                  </div>
+                </form>
+              }
+            }
+
+            <!-- TAB 2: STORICO VISITE -->
+            @if (activeTab() === 'visite') {
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="h6 font-extrabold text-slate-800 mb-0">Cronologia Appuntamenti</h4>
+                <ad-button
+                  label="Registra Visita"
+                  iconClass="fa-solid fa-plus me-1"
+                  variant="outline-primary"
+                  btnClass="btn-sm py-1.5 px-3"
+                  (onClick)="openNewVisitDialog()"
+                ></ad-button>
+              </div>
+
+              @if (client.visits.length === 0) {
+                <div class="text-center py-5 text-slate-400 bg-white rounded-3 border border-slate-100">
+                  <i class="fa-solid fa-calendar-xmark fa-2x opacity-35 mb-2"></i>
+                  <p class="mb-0 small font-semibold">Nessuna visita registrata in archivio</p>
+                </div>
+              } @else {
+                <div class="timeline-container">
+                  @for (visit of client.visits; track visit.id) {
+                    <div class="timeline-item pb-4 position-relative">
+                      <div class="timeline-icon bg-tc-50 border-2 border-tc-500 rounded-circle position-absolute"></div>
+                      <div class="timeline-content bg-white p-3 rounded-3 border border-slate-100 shadow-xsm ms-4">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                          <div>
+                            <span class="badge bg-tc-50 text-tc-700 font-bold mb-1 d-inline-block">{{ visit.serviceName }}</span>
+                            <h5 class="h6 text-slate-800 font-bold mb-0">{{ visit.doctorName }}</h5>
+                          </div>
+                          <span class="x-small text-slate-400 font-bold">{{ formatDate(visit.date) }}</span>
+                        </div>
+                        
+                        <!-- Payment details display -->
+                        <div class="mt-2 pt-2 border-top border-slate-100 d-flex justify-content-between align-items-center">
+                          <span class="x-small text-slate-500 font-semibold">Prezzo: <span class="font-extrabold text-slate-800">{{ formatCurrency(visit.amount) }}</span></span>
+                          
+                          <!-- Method breakdown badge -->
+                          @if (visit.paymentMethod === 'contanti') {
+                            <span class="badge bg-amber-50 text-amber-700 border border-amber-200 x-small font-bold">
+                              <i class="fa-solid fa-money-bill me-1"></i>100% Contanti
+                            </span>
+                          } @else if (visit.paymentMethod === 'carta') {
+                            <span class="badge bg-blue-50 text-blue-700 border border-blue-200 x-small font-bold">
+                              <i class="fa-solid fa-credit-card me-1"></i>100% Carta
+                            </span>
+                          } @else {
+                            <span class="badge bg-purple-50 text-purple-700 border border-purple-200 x-small font-bold d-flex flex-column align-items-end gap-0.5">
+                              <span><i class="fa-solid fa-circle-nodes me-1"></i>Misto Split</span>
+                              <span class="font-medium text-purple-600" style="font-size: 0.65rem;">
+                                Contanti: {{ formatCurrency(visit.paymentDetails.cashAmount) }} (50%) + Carta: {{ formatCurrency(visit.paymentDetails.cardAmount) }} (50%)
+                              </span>
+                            </span>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            }
+
+            <!-- TAB 3: DOCUMENTI -->
+            @if (activeTab() === 'documenti') {
+              <div class="mb-4">
+                <ad-file-upload
+                  accept="image/*,application/pdf"
+                  [multiple]="true"
+                  [disabled]="isLoading()"
+                  (onSelect)="onFileSelect($event)"
+                ></ad-file-upload>
+              </div>
+
+              <h4 class="h6 font-extrabold text-slate-800 mb-3">Documenti Allegati ({{ client.attachments.length }})</h4>
+
+              @if (client.attachments.length === 0) {
+                <div class="text-center py-5 text-slate-400 bg-white rounded-3 border border-slate-100">
+                  <i class="fa-solid fa-file-excel fa-2x opacity-35 mb-2"></i>
+                  <p class="mb-0 small font-semibold">Nessun file o documento allegato</p>
+                </div>
+              } @else {
+                <div class="d-flex flex-column gap-2">
+                  @for (doc of client.attachments; track doc.id) {
+                    <div class="bg-white p-3 rounded-3 border border-slate-100 d-flex align-items-center justify-content-between hover-shadow transition-all">
+                      <div class="d-flex align-items-center gap-3 min-w-0">
+                        <div class="doc-icon-container bg-slate-50 rounded-2 d-flex align-items-center justify-content-center flex-shrink-0">
+                          @if (doc.type === 'pdf') {
+                            <i class="fa-solid fa-file-pdf text-rose-500 fa-lg"></i>
+                          } @else if (doc.type === 'image') {
+                            @if (doc.url && doc.url !== '#') {
+                              <img [src]="doc.url" class="doc-preview rounded" alt="preview" />
+                            } @else {
+                              <i class="fa-solid fa-file-image text-blue-500 fa-lg"></i>
+                            }
+                          } @else {
+                            <i class="fa-solid fa-file-lines text-slate-400 fa-lg"></i>
+                          }
+                        </div>
+                        <div class="min-w-0">
+                          <a
+                            [href]="doc.url"
+                            target="_blank"
+                            class="font-bold text-slate-800 text-sm mb-0.5 d-block text-decoration-none truncate hover-text-tc"
+                          >
+                            {{ doc.name }}
+                          </a>
+                          <span class="x-small text-slate-400 font-semibold d-block">
+                            {{ doc.size }} • caricato il {{ formatDate(doc.uploadDate) }}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="d-flex gap-1">
+                        <a
+                          [href]="doc.url"
+                          download
+                          target="_blank"
+                          class="btn btn-light btn-sm text-slate-600 rounded p-1.5 d-flex align-items-center justify-content-center"
+                          title="Scarica documento"
+                        >
+                          <i class="fa-solid fa-download"></i>
+                        </a>
+                        <button
+                          class="btn btn-light btn-sm text-rose-500 rounded p-1.5 d-flex align-items-center justify-content-center"
+                          title="Elimina"
+                          (click)="deleteAttachment(doc.id)"
+                        >
+                          <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            }
+          </div>
+        </div>
+      } @else {
+        <!-- Blank state selected client -->
+        <div class="card detail-card empty-card border-0 shadow-sm rounded-3 d-flex flex-column align-items-center justify-content-center p-5 text-center bg-white">
+          <div class="empty-icon-wrapper mb-3 bg-tc-50 text-tc-500 rounded-circle d-flex align-items-center justify-content-center">
+            <i class="fa-solid fa-user-doctor fa-3x"></i>
+          </div>
+          <h4 class="h5 font-extrabold text-slate-800">Seleziona un Cliente</h4>
+          <p class="text-slate-400 small mb-0 max-w-xs">
+            Seleziona un nominativo dall'archivio a sinistra per visualizzarne la scheda anagrafica, i documenti allegati e lo storico visite.
+          </p>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- DIALOG: NUOVO CLIENTE -->
+<ad-dialog
+  header="Registrazione Nuovo Cliente"
+  [(visible)]="showNewClientDialog"
+  width="500px"
+>
+  <form (ngSubmit)="createClient()" class="d-flex flex-column gap-2 pt-2">
+    <ad-input
+      label="Nome e Cognome"
+      [value]="newClientForm.name"
+      (valueChange)="newClientForm.name = $event"
+      [error]="newClientErrors['name']"
+      placeholder="Es: Mario Rossi"
+      [required]="true"
+    ></ad-input>
+    <ad-input
+      label="Telefono"
+      [value]="newClientForm.phone"
+      (valueChange)="newClientForm.phone = $event"
+      [error]="newClientErrors['phone']"
+      placeholder="Es: +39 347 1234567"
+      [required]="true"
+    ></ad-input>
+    <ad-input
+      label="Email"
+      [value]="newClientForm.email"
+      (valueChange)="newClientForm.email = $event"
+      [error]="newClientErrors['email']"
+      placeholder="Es: mario.rossi@email.com"
+      type="email"
+      [required]="true"
+    ></ad-input>
+    <ad-input
+      label="Codice Fiscale"
+      [value]="newClientForm.fiscalCode"
+      (valueChange)="newClientForm.fiscalCode = $event"
+      [error]="newClientErrors['fiscalCode']"
+      placeholder="Es: RSSMRA80A01H501U"
+      [required]="true"
+    ></ad-input>
+    <ad-input
+      label="Data di Nascita"
+      [value]="newClientForm.birthDate"
+      (valueChange)="newClientForm.birthDate = $event"
+      type="date"
+    ></ad-input>
+    <ad-input
+      label="Indirizzo Residenza"
+      [value]="newClientForm.address"
+      (valueChange)="newClientForm.address = $event"
+      placeholder="Es: Via Roma 10, Milano"
+    ></ad-input>
+
+    <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top border-slate-100">
+      <ad-button
+        label="Annulla"
+        variant="outline-secondary"
+        type="button"
+        (onClick)="showNewClientDialog.set(false)"
+      ></ad-button>
+      <ad-button
+        label="Registra Cliente"
+        variant="primary"
+        type="submit"
+        [loading]="isLoading()"
+      ></ad-button>
+    </div>
+  </form>
+</ad-dialog>
+
+<!-- DIALOG: REGISTRA VISITA -->
+<ad-dialog
+  header="Registra Visita in Studio"
+  [(visible)]="showNewVisitDialog"
+  width="450px"
+>
+  @if (selectedClient(); as client) {
+    <form (ngSubmit)="registerVisit()" class="d-flex flex-column gap-3 pt-2">
+      <div class="p-2 bg-slate-50 border border-slate-100 rounded-3 text-xs text-slate-600">
+        Registrazione per il paziente: <span class="font-extrabold text-slate-800">{{ client.name }}</span>
+      </div>
+
+      <ad-input
+        label="Medico Esecutore"
+        [value]="newVisitForm.doctorName"
+        (valueChange)="newVisitForm.doctorName = $event"
+        [required]="true"
+      ></ad-input>
+
+      <ad-input
+        label="Servizio/Trattamento"
+        [value]="newVisitForm.serviceName"
+        (valueChange)="newVisitForm.serviceName = $event"
+        [required]="true"
+      ></ad-input>
+
+      <ad-input
+        label="Importo (€)"
+        [value]="newVisitForm.amount"
+        (valueChange)="newVisitForm.amount = $event"
+        type="number"
+        [required]="true"
+      ></ad-input>
+
+      <div class="mb-2">
+        <label class="form-label text-slate-700 font-semibold small mb-1.5 d-block">Metodo di Pagamento</label>
+        <select
+          [(ngModel)]="newVisitForm.paymentMethod"
+          name="paymentMethod"
+          class="form-select border-2 rounded-3 p-2 text-sm font-semibold text-slate-700"
+        >
+          <option value="contanti">Tutto Contanti</option>
+          <option value="carta">Tutta Carta</option>
+          <option value="misto">Misto (Cash & Card Split)</option>
+        </select>
+      </div>
+
+      @if (newVisitForm.paymentMethod === 'misto') {
+        <div class="p-3 bg-purple-50/50 border border-purple-100 rounded-3">
+          <label class="form-label text-purple-800 font-bold x-small d-block mb-1">Quota in Contanti: {{ newVisitForm.cashPercentage }}%</label>
+          <input
+            type="range"
+            min="10"
+            max="90"
+            step="5"
+            [(ngModel)]="newVisitForm.cashPercentage"
+            name="cashPercentage"
+            class="form-range custom-purple-range"
+          />
+          <div class="d-flex justify-content-between text-slate-500 x-small font-semibold mt-1">
+            <span>Contanti: {{ formatCurrency(newVisitForm.amount * (newVisitForm.cashPercentage / 100)) }}</span>
+            <span>Carta: {{ formatCurrency(newVisitForm.amount * (1 - (newVisitForm.cashPercentage / 100))) }}</span>
+          </div>
+        </div>
+      }
+
+      <div class="d-flex gap-2 justify-content-end mt-3 pt-2 border-top border-slate-100">
+        <ad-button
+          label="Annulla"
+          variant="outline-secondary"
+          type="button"
+          (onClick)="showNewVisitDialog.set(false)"
+        ></ad-button>
+        <ad-button
+          label="Registra Pagamento"
+          variant="primary"
+          type="submit"
+        ></ad-button>
+      </div>
+    </form>
+  }
+</ad-dialog>

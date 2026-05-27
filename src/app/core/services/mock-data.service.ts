@@ -4,6 +4,8 @@ import { Doctor } from '../models/doctor.model';
 import { Studio } from '../models/studio.model';
 import { DailyStats, GlobalStats, HourlyData } from '../models/stats.model';
 import { PlanType } from '../models/plan.model';
+import { Client, Visit, Attachment, PaymentMethod } from '../models/client.model';
+import { SitePageConfig, SiteBlock } from '../models/site-builder.model';
 
 const NAMES = [
   'Mario Gentile', 'Anna Conti', 'Roberto Ferretti', 'Elena Marini',
@@ -346,17 +348,317 @@ const HOURLY_DATA: HourlyData[] = [
   { hour: 17, label: '17:00', count: 5 },
 ];
 
+const DEFAULT_SITE_PAGE: SitePageConfig = {
+  theme: {
+    primaryColor: '#6366f1',
+    fontFamily: 'Inter, sans-serif',
+    pageBackgroundColor: '#ffffff'
+  },
+  blocks: [
+    {
+      id: 'block-hero-1',
+      type: 'hero',
+      order: 0,
+      paddingY: 'none',
+      config: {
+        title: 'Benvenuti allo Studio Medico',
+        subtitle: 'Prenota la tua visita online in pochi clic o mettiti in coda comodamente da casa.',
+        imageUrl: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1200&q=80',
+        overlayOpacity: 0.6,
+        minHeight: 380,
+        textAlign: 'center',
+        buttonLabel: 'Prenota Ora',
+        buttonLink: '#prenota'
+      } as any
+    },
+    {
+      id: 'block-text-1',
+      type: 'text',
+      order: 1,
+      paddingY: 'md',
+      config: {
+        content: '<p>Il nostro studio offre servizi medici di alta qualità dal 2005. Siamo un team di professionisti dedicati alla tua salute e al tuo benessere.</p>',
+        align: 'center',
+        fontSize: 'normal',
+        color: '#475569'
+      } as any
+    },
+    {
+      id: 'block-spacer-1',
+      type: 'spacer',
+      order: 2,
+      paddingY: 'none',
+      config: {
+        height: 16
+      } as any
+    },
+    {
+      id: 'block-phone-1',
+      type: 'phone-button',
+      order: 3,
+      paddingY: 'md',
+      config: {
+        phoneNumber: '+39021234567',
+        label: 'Chiama lo Studio',
+        color: 'primary',
+        icon: true,
+        size: 'md',
+        align: 'center'
+      } as any
+    }
+  ]
+};
+
 @Injectable({ providedIn: 'root' })
 export class MockDataService {
   private readonly _doctors = signal<Doctor[]>(INITIAL_DOCTORS);
   private readonly _queue = signal<Booking[]>([...INITIAL_QUEUE, ...makeHistory()]);
   private readonly _studios = signal<Studio[]>(INITIAL_STUDIOS);
   private readonly _suspended = signal<boolean>(false);
+  private readonly _clients = signal<Client[]>([]);
+  private readonly _sitePages = signal<Record<string, SitePageConfig>>(
+    this._loadSitePages()
+  );
 
   readonly doctors = this._doctors.asReadonly();
   readonly queue = this._queue.asReadonly();
   readonly studios = this._studios.asReadonly();
   readonly suspended = this._suspended.asReadonly();
+  readonly clients = this._clients.asReadonly();
+
+  readonly queueEnabled   = signal<boolean>(this._loadPref('tc_queue_enabled', true));
+  readonly bookingEnabled = signal<boolean>(this._loadPref('tc_booking_enabled', true));
+  readonly brandColor     = signal<string>(this._loadStrPref('tc_brand_color', '#6366f1'));
+
+  constructor() {
+    this.initializeClients();
+    this._applyBrandColor(this.brandColor());
+  }
+
+  private _loadSitePages(): Record<string, SitePageConfig> {
+    try {
+      const raw = localStorage.getItem('tc_site_pages');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return { 'studio-demo': JSON.parse(JSON.stringify(DEFAULT_SITE_PAGE)) };
+  }
+
+  private _loadPref(key: string, def: boolean): boolean {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw !== null ? JSON.parse(raw) : def;
+    } catch { return def; }
+  }
+
+  private _loadStrPref(key: string, def: string): string {
+    return localStorage.getItem(key) ?? def;
+  }
+
+  private _applyBrandColor(hex: string): void {
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty('--brand', hex);
+      document.documentElement.style.setProperty('--brand-dark', this._darken(hex));
+      document.documentElement.style.setProperty('--brand-light', this._lighten(hex));
+      document.documentElement.style.setProperty('--brand-muted', `${hex}1f`);
+      document.documentElement.style.setProperty('--brand-glow', `${hex}40`);
+    }
+  }
+
+  private _darken(hex: string): string {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.max(0, (num >> 16) - 30);
+    const g = Math.max(0, ((num >> 8) & 0xff) - 30);
+    const b = Math.max(0, (num & 0xff) - 30);
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+  }
+
+  private _lighten(hex: string): string {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.min(255, (num >> 16) + 210);
+    const g = Math.min(255, ((num >> 8) & 0xff) + 210);
+    const b = Math.min(255, (num & 0xff) + 210);
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+  }
+
+  setBrandColor(hex: string): void {
+    this.brandColor.set(hex);
+    localStorage.setItem('tc_brand_color', hex);
+    this._applyBrandColor(hex);
+  }
+
+  setQueueEnabled(val: boolean): void {
+    this.queueEnabled.set(val);
+    localStorage.setItem('tc_queue_enabled', JSON.stringify(val));
+  }
+
+  setBookingEnabled(val: boolean): void {
+    this.bookingEnabled.set(val);
+    localStorage.setItem('tc_booking_enabled', JSON.stringify(val));
+  }
+
+  private initializeClients(): void {
+    const bookings = this._queue();
+    const clientMap = new Map<string, Client>();
+    
+    const getServicePrice = (type: string) => {
+      switch (type) {
+        case 'visita': return 80;
+        case 'ricetta': return 15;
+        case 'certificato': return 40;
+        case 'controllo': return 50;
+        case 'ritiro referti': return 10;
+        default: return 30;
+      }
+    };
+
+    const methods: PaymentMethod[] = ['contanti', 'carta', 'misto'];
+
+    bookings.forEach(b => {
+      const name = b.patientName;
+      if (!clientMap.has(name)) {
+        const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+        const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
+        const randNum = Math.floor(Math.random() * 90 + 10);
+        const cf = `${initials}XYZ${randNum}A01B`;
+        
+        clientMap.set(name, {
+          id: 'CL-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+          name: name,
+          phone: b.phone || '+39 347 1234567',
+          email: `${cleanName}@email.com`,
+          birthDate: `${1950 + Math.floor(Math.random() * 45)}-${String(1 + Math.floor(Math.random() * 12)).padStart(2, '0')}-${String(1 + Math.floor(Math.random() * 28)).padStart(2, '0')}`,
+          fiscalCode: cf,
+          address: `Via delle Primule ${Math.floor(Math.random() * 100) + 1}, Milano`,
+          createdAt: b.createdAt,
+          visits: [],
+          attachments: [
+            {
+              id: 'ATT-INIT-1',
+              name: 'referto_visita_cardiologica.pdf',
+              size: '342 KB',
+              type: 'pdf',
+              uploadDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+              url: '#'
+            },
+            {
+              id: 'ATT-INIT-2',
+              name: 'tessera_sanitaria.jpg',
+              size: '1.2 MB',
+              type: 'image',
+              uploadDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+              url: '#'
+            }
+          ]
+        });
+      }
+
+      const client = clientMap.get(name)!;
+      if (b.status === 'completata') {
+        const amount = getServicePrice(b.requestType);
+        const paymentMethod = methods[Math.floor(Math.random() * methods.length)];
+        let cashAmount = 0;
+        let cardAmount = 0;
+        if (paymentMethod === 'contanti') {
+          cashAmount = amount;
+        } else if (paymentMethod === 'carta') {
+          cardAmount = amount;
+        } else {
+          cashAmount = amount * 0.5;
+          cardAmount = amount * 0.5;
+        }
+
+        const visit: Visit = {
+          id: 'VIST-' + b.id,
+          date: b.completedAt || b.createdAt,
+          doctorName: b.doctorName,
+          serviceName: b.requestType.charAt(0).toUpperCase() + b.requestType.slice(1),
+          paymentMethod,
+          amount,
+          paymentDetails: { cashAmount, cardAmount }
+        };
+        client.visits.push(visit);
+      }
+    });
+
+    clientMap.forEach(client => {
+      if (client.visits.length === 0) {
+        const amount = 80;
+        client.visits.push({
+          id: 'VIST-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+          date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+          doctorName: 'Dott. Marco Rossi',
+          serviceName: 'Visita Generale',
+          paymentMethod: 'misto',
+          amount,
+          paymentDetails: { cashAmount: amount * 0.5, cardAmount: amount * 0.5 }
+        });
+      }
+      client.visits.sort((a, b) => b.date.getTime() - a.date.getTime());
+    });
+
+    this._clients.set(Array.from(clientMap.values()));
+  }
+
+  updateClient(updated: Client): void {
+    this._clients.update(cls => cls.map(c => c.id === updated.id ? updated : c));
+  }
+
+  addClient(clientData: Omit<Client, 'id' | 'createdAt' | 'visits' | 'attachments'>): Client {
+    const newClient: Client = {
+      ...clientData,
+      id: 'CL-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+      createdAt: new Date(),
+      visits: [],
+      attachments: []
+    };
+    this._clients.update(cls => [newClient, ...cls]);
+    return newClient;
+  }
+
+  addAttachmentToClient(clientId: string, attachment: Omit<Attachment, 'id' | 'uploadDate'>): void {
+    const newAttachment: Attachment = {
+      ...attachment,
+      id: 'ATT-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+      uploadDate: new Date()
+    };
+    this._clients.update(cls =>
+      cls.map(c => {
+        if (c.id !== clientId) return c;
+        return {
+          ...c,
+          attachments: [newAttachment, ...c.attachments]
+        };
+      })
+    );
+  }
+
+  deleteAttachmentFromClient(clientId: string, attachmentId: string): void {
+    this._clients.update(cls =>
+      cls.map(c => {
+        if (c.id !== clientId) return c;
+        return {
+          ...c,
+          attachments: c.attachments.filter(a => a.id !== attachmentId)
+        };
+      })
+    );
+  }
+
+  addVisitToClient(clientId: string, visitData: Omit<Visit, 'id'>): void {
+    const newVisit: Visit = {
+      ...visitData,
+      id: 'VIST-' + Math.random().toString(36).substr(2, 9).toUpperCase()
+    };
+    this._clients.update(cls =>
+      cls.map(c => {
+        if (c.id !== clientId) return c;
+        return {
+          ...c,
+          visits: [newVisit, ...c.visits]
+        };
+      })
+    );
+  }
 
   readonly activeQueue = computed(() =>
     this._queue().filter(b => b.status === 'in_attesa' || b.status === 'in_corso')
@@ -516,6 +818,20 @@ export class MockDataService {
       doctorId: doctor.id,
       doctorName: doctor.name,
       requestType: type,
+    });
+  }
+
+  // Site Builder Methods
+  getSitePage(studioSlug: string): SitePageConfig {
+    const pages = this._sitePages();
+    return pages[studioSlug] || JSON.parse(JSON.stringify(DEFAULT_SITE_PAGE));
+  }
+
+  saveSitePage(studioSlug: string, config: SitePageConfig): void {
+    this._sitePages.update(pages => {
+      const updated = { ...pages, [studioSlug]: JSON.parse(JSON.stringify(config)) };
+      try { localStorage.setItem('tc_site_pages', JSON.stringify(updated)); } catch {}
+      return updated;
     });
   }
 }

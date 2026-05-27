@@ -1,0 +1,16 @@
+<button
+  [type]="type"
+  [class]="buttonClasses"
+  [disabled]="disabled || loading"
+  (click)="handleCLick($event)"
+>
+  @if (loading) {
+    <i class="fa-solid fa-circle-notch fa-spin me-1"></i>
+  } @else if (iconClass) {
+    <i [class]="iconClass"></i>
+  }
+  @if (label) {
+    <span>{{ label }}</span>
+  }
+  <ng-content></ng-content>
+</button>

@@ -1,0 +1,33 @@
+<div class="mb-3">
+  @if (label) {
+    <label [for]="id" class="form-label text-slate-700 font-semibold small mb-1.5 d-block">
+      {{ label }} @if (required) { <span class="text-rose-500">*</span> }
+    </label>
+  }
+  <div class="position-relative">
+    @if (iconClass) {
+      <div class="position-absolute top-50 translate-middle-y start-0 ps-3 text-slate-400">
+        <i [class]="iconClass"></i>
+      </div>
+    }
+    <input
+      [id]="id"
+      [type]="type"
+      [placeholder]="placeholder"
+      [disabled]="disabled"
+      [required]="required"
+      [ngModel]="value"
+      (ngModelChange)="onInputChange($event)"
+      (focus)="onFocus.emit($event)"
+      (blur)="onBlur.emit($event)"
+      class="form-control transition-all border-2"
+      [class.ps-5]="iconClass"
+      [class.is-invalid]="error"
+    />
+  </div>
+  @if (error) {
+    <div class="invalid-feedback d-block mt-1 small font-medium text-rose-500">
+      {{ error }}
+    </div>
+  }
+</div>

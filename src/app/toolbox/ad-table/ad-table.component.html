@@ -1,0 +1,45 @@
+<div class="p-table-container rounded-3 overflow-hidden border border-slate-200 bg-white">
+  <p-table
+    [value]="value"
+    [paginator]="paginator"
+    [rows]="rows"
+    [loading]="loading"
+    [styleClass]="'p-datatable-striped p-datatable-sm ' + tableStyleClass"
+    [tableStyle]="{ 'min-width': '50rem' }"
+  >
+    <ng-template pTemplate="header">
+      <tr class="bg-slate-50 border-bottom border-slate-200">
+        @for (col of columns; track col.field) {
+          <th [style.width]="col.width" class="text-slate-700 font-bold px-4 py-3 border-0 text-start uppercase tracking-wider small">
+            {{ col.header }}
+          </th>
+        }
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-rowData>
+      <tr class="border-bottom border-slate-100 hover:bg-slate-50 transition-colors">
+        @if (rowTemplate) {
+          <ng-container *ngTemplateOutlet="rowTemplate; context: { $implicit: rowData }"></ng-container>
+        } @else {
+          @for (col of columns; track col.field) {
+            <td class="px-4 py-3 text-slate-800 font-medium align-middle border-0 text-start">
+              {{ rowData[col.field] }}
+            </td>
+          }
+        }
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td [attr.colspan]="columns.length" class="text-center py-5 text-slate-400">
+          <div class="d-flex flex-column align-items-center gap-2 py-4">
+            <i class="fa-solid fa-folder-open fa-2x opacity-40"></i>
+            <span class="font-semibold text-slate-500">Nessun dato trovato</span>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>

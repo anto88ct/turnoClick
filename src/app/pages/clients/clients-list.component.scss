@@ -1,0 +1,127 @@
+.avatar-circle {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  font-size: 0.875rem;
+  user-select: none;
+}
+
+.avatar-circle-lg {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  user-select: none;
+}
+
+.truncate-email {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-card {
+  min-height: calc(100vh - 180px);
+  position: sticky;
+  top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-card {
+  border: 2px dashed #cbd5e1 !important;
+  background-color: #f8fafc !important;
+  
+  .empty-icon-wrapper {
+    width: 6rem;
+    height: 6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.nav-tabs {
+  .nav-link {
+    background: none;
+    border-bottom: 2px solid transparent !important;
+    border-radius: 0;
+    transition: all 0.2s ease-in-out;
+    
+    &:hover {
+      color: #10b981 !important;
+      border-bottom-color: #cbd5e1 !important;
+    }
+
+    &.active-tab {
+      color: #10b981 !important;
+      border-bottom: 2px solid #10b981 !important;
+    }
+  }
+}
+
+// Timeline styles for visits tab
+.timeline-container {
+  padding-left: 0.75rem;
+  border-left: 2px solid #e2e8f0;
+  margin-left: 0.5rem;
+  margin-top: 1rem;
+}
+
+.timeline-item {
+  position: relative;
+  
+  .timeline-icon {
+    width: 0.75rem;
+    height: 0.75rem;
+    left: -1.2rem;
+    top: 0.5rem;
+    z-index: 2;
+  }
+}
+
+// Document previews
+.doc-icon-container {
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  .doc-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.hover-shadow:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  border-color: #cbd5e1 !important;
+}
+
+.hover-text-tc:hover {
+  color: #10b981 !important;
+}
+
+.text-mono {
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+// Custom select style matching input style
+.form-select {
+  border-color: #cbd5e1;
+  font-weight: 500;
+  &:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+  }
+}
+
+// Slider styling
+.custom-purple-range {
+  accent-color: #8b5cf6;
+}

@@ -1,0 +1,14 @@
+<p-dialog
+  [header]="header"
+  [visible]="visible"
+  (visibleChange)="visibleChange.emit($event)"
+  (onHide)="onHide.emit()"
+  [modal]="modal"
+  [style]="{ width: width }"
+  [draggable]="draggable"
+  [resizable]="resizable"
+  [styleClass]="'ad-dialog-custom ' + styleClass"
+  [breakpoints]="{ '960px': '75vw', '640px': '95vw' }"
+>
+  <ng-content></ng-content>
+</p-dialog>

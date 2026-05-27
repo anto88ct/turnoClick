@@ -7,7 +7,7 @@ import { MockDataService } from '../../core/services/mock-data.service';
   standalone: true,
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
   template: `
-    <div class="flex h-[100dvh] bg-tc-surface overflow-hidden">
+    <div class="flex h-[calc(100dvh-2.25rem)] bg-tc-surface overflow-hidden">
       <!-- Sidebar -->
       <aside
         [class]="sidebarOpen() ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"

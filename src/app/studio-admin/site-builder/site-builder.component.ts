@@ -6,7 +6,7 @@ import { MockDataService } from '../../core/services/mock-data.service';
 import { TcButtonComponent } from '../../shared/tc-button/tc-button.component';
 import { SiteBlockRendererComponent } from '../../shared/site-block-renderer/site-block-renderer.component';
 import {
-  SiteBlock, SiteBlockType, SitePageConfig,
+  SiteBlock, SiteBlockType, SitePageConfig, PublicViewConfig,
   TextBlockConfig, ImageBlockConfig, GalleryBlockConfig, VideoBlockConfig,
   MapBlockConfig, PhoneButtonConfig, SpacerBlockConfig, HeroBlockConfig, DividerBlockConfig
 } from '../../core/models/site-builder.model';
@@ -135,6 +135,14 @@ interface CtxMenu { x: number; y: number; blockId: string; }
                   class="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-colors flex-shrink-0">
             <i class="pi pi-palette"></i>
             <span class="hidden sm:inline">Tema</span>
+          </button>
+
+          <!-- Public View Config -->
+          <button (click)="togglePublicViewPanel($event)"
+                  [class]="showPublicViewPanel() ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
+                  class="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-colors flex-shrink-0">
+            <i class="pi pi-eye"></i>
+            <span class="hidden sm:inline">Vista pubblica</span>
           </button>
 
           <div class="flex-1"></div>
@@ -321,8 +329,150 @@ interface CtxMenu { x: number; y: number; blockId: string; }
                       transition-transform duration-300
                       absolute right-0 top-0 h-full shadow-2xl
                       lg:relative lg:shadow-none z-30"
-               [class.translate-x-full]="!selectedBlock() && !showThemePanel()"
+               [class.translate-x-full]="!selectedBlock() && !showThemePanel() && !showPublicViewPanel()"
                [class.lg:translate-x-0]="true">
+
+          @if (showPublicViewPanel()) {
+            <div class="p-5">
+              <div class="flex items-center justify-between mb-5 pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                    <i class="pi pi-eye text-sm"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-extrabold text-slate-800 leading-tight">Vista pubblica</h3>
+                    <p class="text-[10px] text-slate-400">Cosa vede il paziente</p>
+                  </div>
+                </div>
+                <button (click)="showPublicViewPanel.set(false)" class="text-slate-400 hover:text-slate-700 p-1">
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+
+              <div class="space-y-3">
+
+                <!-- Coda live -->
+                <div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
+                  <div class="min-w-0 pr-3">
+                    <p class="text-xs font-bold text-slate-700">Stato coda live</p>
+                    <p class="text-[10px] text-slate-400 leading-snug mt-0.5">Mostra widget con n° in attesa e tempo medio</p>
+                  </div>
+                  <button (click)="togglePvcField('showQueueStatus')"
+                          [class]="publicViewConfig().showQueueStatus ? 'bg-emerald-500' : 'bg-slate-300'"
+                          class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0">
+                    <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
+                          [class]="publicViewConfig().showQueueStatus ? 'left-5' : 'left-0.5'"></span>
+                  </button>
+                </div>
+
+                <!-- Entra in coda -->
+                <div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
+                  <div class="min-w-0 pr-3">
+                    <p class="text-xs font-bold text-slate-700">Entra in coda</p>
+                    <p class="text-[10px] text-slate-400 leading-snug mt-0.5">Permetti al paziente di accodarsi dal sito</p>
+                  </div>
+                  <button (click)="togglePvcField('allowJoinQueue')"
+                          [class]="publicViewConfig().allowJoinQueue ? 'bg-emerald-500' : 'bg-slate-300'"
+                          class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0">
+                    <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
+                          [class]="publicViewConfig().allowJoinQueue ? 'left-5' : 'left-0.5'"></span>
+                  </button>
+                </div>
+
+                <!-- Prenotazione online -->
+                <div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
+                  <div class="min-w-0 pr-3">
+                    <p class="text-xs font-bold text-slate-700">Prenotazione online</p>
+                    <p class="text-[10px] text-slate-400 leading-snug mt-0.5">Consenti prenotazione (richiede accesso/registrazione)</p>
+                  </div>
+                  <button (click)="togglePvcField('allowBookAppointment')"
+                          [class]="publicViewConfig().allowBookAppointment ? 'bg-emerald-500' : 'bg-slate-300'"
+                          class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0">
+                    <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
+                          [class]="publicViewConfig().allowBookAppointment ? 'left-5' : 'left-0.5'"></span>
+                  </button>
+                </div>
+
+                <!-- CTA pubblica -->
+                <div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50"
+                     [class.opacity-50]="!publicViewConfig().allowBookAppointment"
+                     [class.pointer-events-none]="!publicViewConfig().allowBookAppointment">
+                  <div class="min-w-0 pr-3">
+                    <p class="text-xs font-bold text-slate-700">CTA visibile non loggati</p>
+                    <p class="text-[10px] text-slate-400 leading-snug mt-0.5">Mostra bottone prenota anche se non registrato (reindirizza al login)</p>
+                  </div>
+                  <button (click)="togglePvcField('showBookingCTAPublic')"
+                          [class]="publicViewConfig().showBookingCTAPublic ? 'bg-emerald-500' : 'bg-slate-300'"
+                          class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0">
+                    <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
+                          [class]="publicViewConfig().showBookingCTAPublic ? 'left-5' : 'left-0.5'"></span>
+                  </button>
+                </div>
+
+                <!-- Lista medici -->
+                <div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
+                  <div class="min-w-0 pr-3">
+                    <p class="text-xs font-bold text-slate-700">Sezione medici</p>
+                    <p class="text-[10px] text-slate-400 leading-snug mt-0.5">Mostra la lista dei medici dello studio</p>
+                  </div>
+                  <button (click)="togglePvcField('showDoctors')"
+                          [class]="publicViewConfig().showDoctors ? 'bg-emerald-500' : 'bg-slate-300'"
+                          class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0">
+                    <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
+                          [class]="publicViewConfig().showDoctors ? 'left-5' : 'left-0.5'"></span>
+                  </button>
+                </div>
+
+                <!-- Label bottone prenotazione -->
+                <div class="pt-1">
+                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Testo bottone prenotazione</label>
+                  <input type="text" class="tc-input-sm w-full"
+                         [ngModel]="publicViewConfig().bookingLabel"
+                         (ngModelChange)="setPvcBookingLabel($event)"
+                         placeholder="Es. Prenota una visita">
+                </div>
+
+                <!-- Preview chip -->
+                <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 mt-1">
+                  <p class="text-[10px] font-black text-emerald-700 uppercase tracking-wide mb-2">Anteprima attivazioni</p>
+                  <div class="flex flex-wrap gap-1.5">
+                    @if (publicViewConfig().showQueueStatus) {
+                      <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">Coda live ✓</span>
+                    }
+                    @if (publicViewConfig().allowJoinQueue) {
+                      <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">Entra in coda ✓</span>
+                    }
+                    @if (publicViewConfig().allowBookAppointment) {
+                      <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">Prenotazione ✓</span>
+                    }
+                    @if (publicViewConfig().showDoctors) {
+                      <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">Lista medici ✓</span>
+                    }
+                    @if (!publicViewConfig().showQueueStatus && !publicViewConfig().allowJoinQueue && !publicViewConfig().allowBookAppointment && !publicViewConfig().showDoctors) {
+                      <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold">Solo contenuto statico</span>
+                    }
+                  </div>
+                </div>
+
+                <!-- Save -->
+                <button (click)="savePublicViewConfig()"
+                        class="w-full py-3 rounded-xl font-extrabold text-sm transition-all"
+                        [class]="publicViewSaved() ? 'bg-emerald-500 text-white' : 'text-white hover:opacity-90'"
+                        [style]="publicViewSaved() ? '' : 'background-color: var(--brand)'">
+                  @if (publicViewSaved()) {
+                    <span class="flex items-center justify-center gap-1.5">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      Configurazione salvata!
+                    </span>
+                  } @else {
+                    Salva configurazione
+                  }
+                </button>
+              </div>
+            </div>
+          }
 
           @if (showThemePanel()) {
             <div class="p-5">
@@ -853,7 +1003,7 @@ interface CtxMenu { x: number; y: number; blockId: string; }
               }
 
             </div>
-          } @else if (!showThemePanel()) {
+          } @else if (!showThemePanel() && !showPublicViewPanel()) {
             <div class="flex flex-col items-center justify-center h-full text-slate-400 p-8 text-center">
               <i class="pi pi-sliders-h text-4xl mb-4 text-slate-200"></i>
               <p class="font-bold text-slate-500 mb-1">Nessun blocco selezionato</p>
@@ -882,9 +1032,12 @@ export class SiteBuilderComponent {
   readonly selectedBlockId = signal<string | null>(null);
   readonly toastVisible = signal(false);
   readonly deleteConfirmId = signal<string | null>(null);
-  readonly showThemePanel = signal(false);
-  readonly showPicker = signal(false);
-  readonly ctxMenu = signal<CtxMenu | null>(null);
+  readonly showThemePanel     = signal(false);
+  readonly showPublicViewPanel = signal(false);
+  readonly showPicker         = signal(false);
+  readonly ctxMenu            = signal<CtxMenu | null>(null);
+  readonly publicViewConfig   = signal(this.mockData.getPublicViewConfig(this.studioSlug));
+  readonly publicViewSaved    = signal(false);
 
   readonly selectedBlock = computed(() => {
     const id = this.selectedBlockId();
@@ -957,6 +1110,7 @@ export class SiteBuilderComponent {
   toggleThemePanel(event: Event): void {
     event.stopPropagation();
     this.showThemePanel.update(v => !v);
+    this.showPublicViewPanel.set(false);
     this.selectedBlockId.set(null);
     this.showPicker.set(false);
   }
@@ -964,6 +1118,33 @@ export class SiteBuilderComponent {
   openThemePanel(event: Event): void {
     event.stopPropagation();
     this.showThemePanel.set(true);
+    this.showPublicViewPanel.set(false);
+  }
+
+  togglePublicViewPanel(event: Event): void {
+    event.stopPropagation();
+    this.showPublicViewPanel.update(v => !v);
+    this.showThemePanel.set(false);
+    this.selectedBlockId.set(null);
+    this.showPicker.set(false);
+  }
+
+  togglePvcField(field: keyof PublicViewConfig): void {
+    const cfg = this.publicViewConfig();
+    const val = cfg[field];
+    if (typeof val === 'boolean') {
+      this.publicViewConfig.set({ ...cfg, [field]: !val });
+    }
+  }
+
+  setPvcBookingLabel(label: string): void {
+    this.publicViewConfig.set({ ...this.publicViewConfig(), bookingLabel: label });
+  }
+
+  savePublicViewConfig(): void {
+    this.mockData.savePublicViewConfig(this.studioSlug, this.publicViewConfig());
+    this.publicViewSaved.set(true);
+    setTimeout(() => this.publicViewSaved.set(false), 3000);
   }
 
   loadPage(): void {

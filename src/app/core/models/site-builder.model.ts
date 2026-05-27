@@ -102,3 +102,19 @@ export interface SitePageConfig {
     pageBackgroundColor?: string;
   };
 }
+
+/** Controls what patients can see/do on the public landing page */
+export interface PublicViewConfig {
+  /** Show live queue status widget (in-attesa count, wait time) */
+  showQueueStatus: boolean;
+  /** Allow patients to join the queue from the site */
+  allowJoinQueue: boolean;
+  /** Allow patients to book appointments from the site (requires login/register) */
+  allowBookAppointment: boolean;
+  /** Show book-appointment CTA even when not logged in (redirects to login) */
+  showBookingCTAPublic: boolean;
+  /** Show doctors list section */
+  showDoctors: boolean;
+  /** Custom booking button label */
+  bookingLabel: string;
+}

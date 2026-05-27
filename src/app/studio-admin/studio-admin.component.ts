@@ -4,8 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { TcButtonComponent } from '../shared/tc-button/tc-button.component';
 import { SiteBuilderComponent } from './site-builder/site-builder.component';
 import { MockDataService } from '../core/services/mock-data.service';
+import { SubscriptionStatusComponent } from '../shared/subscription-status/subscription-status.component';
+import { MyTicketsComponent } from '../shared/my-tickets/my-tickets.component';
 
-type TabId = 'identita' | 'medici' | 'stanze' | 'richieste' | 'orari' | 'sms' | 'qrcode' | 'prenotazione' | 'sito-vetrina';
+type TabId = 'identita' | 'medici' | 'stanze' | 'richieste' | 'orari' | 'sms' | 'qrcode' | 'prenotazione' | 'sito-vetrina' | 'abbonamento' | 'ticket';
 
 const DAYS_IT = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
 const TIPI_NOMI = ['Visita', 'Ricetta', 'Certificato', 'Controllo', 'Ritiro referti', 'Altro'];
@@ -37,6 +39,8 @@ const TABS: Tab[] = [
   { id: 'sms',          label: 'Personalizzazione SMS', shortLabel: 'SMS'       },
   { id: 'qrcode',       label: 'QR Code & Pagina',      shortLabel: 'QR Code'   },
   { id: 'prenotazione', label: 'Prenotazione Online',   shortLabel: 'Prenota'   },
+  { id: 'abbonamento',  label: 'Stato Abbonamento',     shortLabel: 'Piano'     },
+  { id: 'ticket',       label: 'I Miei Ticket',         shortLabel: 'Ticket'    },
 ];
 
 const buildMedico = (id: number, nome: string, cognome: string, specialty: string, morningShift: boolean): Medico => ({
@@ -84,7 +88,7 @@ const SMS_VARS = ['{codice}', '{nome_studio}', '{persone_attesa}', '{tempo_stima
 @Component({
   selector: 'app-studio-admin',
   standalone: true,
-  imports: [FormsModule, RouterLink, TcButtonComponent, SiteBuilderComponent],
+  imports: [FormsModule, RouterLink, TcButtonComponent, SiteBuilderComponent, SubscriptionStatusComponent, MyTicketsComponent],
   template: `
 <div class="flex h-[calc(100dvh-2.25rem)] bg-slate-50 overflow-hidden">
 
@@ -183,8 +187,20 @@ const SMS_VARS = ['{codice}', '{nome_studio}', '{persone_attesa}', '{tempo_stima
       </div>
     }
 
+    <!-- Abbonamento / Ticket (scrollable full-width) -->
+    @if (activeTab() === 'abbonamento') {
+      <div class="flex-1 overflow-y-auto">
+        <app-subscription-status></app-subscription-status>
+      </div>
+    }
+    @if (activeTab() === 'ticket') {
+      <div class="flex-1 overflow-y-auto">
+        <app-my-tickets></app-my-tickets>
+      </div>
+    }
+
     <!-- Scrollable content (all other tabs) -->
-    @if (activeTab() !== 'sito-vetrina') {
+    @if (activeTab() !== 'sito-vetrina' && activeTab() !== 'abbonamento' && activeTab() !== 'ticket') {
     <div class="flex-1 overflow-y-auto">
       <div class="max-w-3xl mx-auto px-4 py-5 lg:px-6 lg:py-6 space-y-5">
 
@@ -1120,6 +1136,14 @@ export class StudioAdminComponent {
       prenotazione: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round"
           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>`,
+      abbonamento: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+      </svg>`,
+      ticket: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
       </svg>`,
     };
     return icons[tabId];

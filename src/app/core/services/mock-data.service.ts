@@ -5,7 +5,7 @@ import { Studio } from '../models/studio.model';
 import { DailyStats, GlobalStats, HourlyData } from '../models/stats.model';
 import { PlanType } from '../models/plan.model';
 import { Client, Visit, Attachment, PaymentMethod } from '../models/client.model';
-import { SitePageConfig, SiteBlock } from '../models/site-builder.model';
+import { SitePageConfig, SiteBlock, PublicViewConfig } from '../models/site-builder.model';
 import { DoctorMessage, DoctorStatus, DoctorAvailability, DoctorStatusType } from '../models/doctor-hub.model';
 
 const NAMES = [
@@ -958,6 +958,25 @@ export class MockDataService {
       try { localStorage.setItem('tc_site_pages', JSON.stringify(updated)); } catch {}
       return updated;
     });
+  }
+
+  // Public View Config
+  private readonly _publicViewConfig = signal<Record<string, PublicViewConfig>>({});
+
+  getPublicViewConfig(slug: string): PublicViewConfig {
+    return this._publicViewConfig()[slug] ?? {
+      showQueueStatus:      true,
+      allowJoinQueue:       false,
+      allowBookAppointment: false,
+      showBookingCTAPublic: false,
+      showDoctors:          true,
+      bookingLabel:         'Prenota appuntamento',
+    };
+  }
+
+  savePublicViewConfig(slug: string, cfg: PublicViewConfig): void {
+    this._publicViewConfig.update(m => ({ ...m, [slug]: { ...cfg } }));
+    try { localStorage.setItem(`tc_pvc_${slug}`, JSON.stringify(cfg)); } catch {}
   }
 
   // Doctor Hub Methods

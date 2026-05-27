@@ -46,6 +46,16 @@ export const dashboardRoutes: Routes = [
         loadComponent: () =>
           import('./medici/medici.component').then(m => m.MediciComponent),
       },
+      {
+        path: 'abbonamento',
+        loadComponent: () =>
+          import('../shared/subscription-status/subscription-status.component').then(m => m.SubscriptionStatusComponent),
+      },
+      {
+        path: 'ticket',
+        loadComponent: () =>
+          import('../shared/my-tickets/my-tickets.component').then(m => m.MyTicketsComponent),
+      },
     ],
   },
 ];

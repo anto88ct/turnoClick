@@ -21,6 +21,16 @@ export const adminRoutes: Routes = [
         loadComponent: () =>
           import('./plans/plans.component').then(m => m.PlansComponent),
       },
+      {
+        path: 'ticket',
+        loadComponent: () =>
+          import('./tickets/tickets.component').then(m => m.AdminTicketsComponent),
+      },
+      {
+        path: 'nuovo-studio',
+        loadComponent: () =>
+          import('./new-studio/new-studio.component').then(m => m.NewStudioComponent),
+      },
     ],
   },
 ];

@@ -6,6 +6,7 @@ import { DailyStats, GlobalStats, HourlyData } from '../models/stats.model';
 import { PlanType } from '../models/plan.model';
 import { Client, Visit, Attachment, PaymentMethod } from '../models/client.model';
 import { SitePageConfig, SiteBlock } from '../models/site-builder.model';
+import { DoctorMessage, DoctorStatus, DoctorAvailability, DoctorStatusType } from '../models/doctor-hub.model';
 
 const NAMES = [
   'Mario Gentile', 'Anna Conti', 'Roberto Ferretti', 'Elena Marini',
@@ -409,6 +410,120 @@ const DEFAULT_SITE_PAGE: SitePageConfig = {
   ]
 };
 
+const INITIAL_DOCTOR_MESSAGES: DoctorMessage[] = [
+  {
+    id: 'MSG-001',
+    fromType: 'segreteria',
+    fromId: 'segreteria',
+    fromName: 'Segreteria',
+    toId: 'dr-rossi',
+    body: 'Buongiorno Dott. Rossi, il paziente Mario Gentile ha chiesto di essere ricontattato per un appuntamento urgente. Ha già telefonato due volte stamattina.',
+    createdAt: new Date(Date.now() - 45 * 60000),
+    read: false,
+  },
+  {
+    id: 'MSG-002',
+    fromType: 'segreteria',
+    fromId: 'segreteria',
+    fromName: 'Segreteria',
+    toId: 'dr-rossi',
+    body: 'Ricorda che alle 15:30 hai il consulto con Dott. Ferrari per il caso Ricci.',
+    createdAt: new Date(Date.now() - 2 * 60 * 60000),
+    read: true,
+  },
+  {
+    id: 'MSG-003',
+    fromType: 'medico',
+    fromId: 'dr-ferrari',
+    fromName: 'Dott. Antonio Ferrari',
+    toId: 'dr-rossi',
+    body: 'Marco, ti mando i referti del paziente Ricci prima del consulto. Caso interessante, patologia rara.',
+    createdAt: new Date(Date.now() - 3 * 60 * 60000),
+    read: true,
+  },
+  {
+    id: 'MSG-004',
+    fromType: 'segreteria',
+    fromId: 'segreteria',
+    fromName: 'Segreteria',
+    toId: 'dr-bianchi',
+    body: 'Dott.ssa Bianchi, la paziente Elena Marini chiede di spostare la seduta di fisioterapia di domani al pomeriggio.',
+    createdAt: new Date(Date.now() - 30 * 60000),
+    read: false,
+  },
+  {
+    id: 'MSG-005',
+    fromType: 'segreteria',
+    fromId: 'segreteria',
+    fromName: 'Segreteria',
+    toId: 'dr-ferrari',
+    body: 'Dott. Ferrari, la signora Greco ha chiamato per i risultati degli esami del sangue. Può richiamarla entro oggi?',
+    createdAt: new Date(Date.now() - 90 * 60000),
+    read: false,
+  },
+  {
+    id: 'MSG-006',
+    fromType: 'medico',
+    fromId: 'dr-rossi',
+    fromName: 'Dott. Marco Rossi',
+    toId: 'dr-bianchi',
+    body: 'Giulia, ho un paziente con lombosciatalgia che potrebbe beneficiare della tua fisioterapia. Te lo mando questa settimana.',
+    createdAt: new Date(Date.now() - 24 * 60 * 60000),
+    read: true,
+  },
+];
+
+const INITIAL_DOCTOR_STATUSES: DoctorStatus[] = [
+  { doctorId: 'dr-rossi',    status: 'in_visita',    patientName: 'Mario Gentile',   updatedAt: new Date(Date.now() - 7 * 60000) },
+  { doctorId: 'dr-bianchi',  status: 'disponibile',  updatedAt: new Date(Date.now() - 10 * 60000) },
+  { doctorId: 'dr-ferrari',  status: 'in_visita',    patientName: 'Giovanni Russo',  updatedAt: new Date(Date.now() - 12 * 60000) },
+  { doctorId: 'dr-romano',   status: 'assente',      updatedAt: new Date(Date.now() - 120 * 60000) },
+  { doctorId: 'dr-esposito', status: 'disponibile',  updatedAt: new Date(Date.now() - 5 * 60000) },
+];
+
+const today = new Date();
+const dateStr = (d: Date) => d.toISOString().split('T')[0];
+const addDays = (d: Date, n: number) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+
+const INITIAL_DOCTOR_AVAILABILITIES: DoctorAvailability[] = [
+  {
+    id: 'AV-001',
+    doctorId: 'dr-rossi',
+    type: 'ferie',
+    dateFrom: dateStr(addDays(today, 14)),
+    dateTo: dateStr(addDays(today, 21)),
+    note: 'Vacanze estive. Coprire con il Dott. Ferrari per le urgenze.',
+  },
+  {
+    id: 'AV-002',
+    doctorId: 'dr-bianchi',
+    type: 'assente',
+    dateFrom: dateStr(addDays(today, 3)),
+    dateTo: dateStr(addDays(today, 3)),
+    timeFrom: '14:00',
+    timeTo: '18:00',
+    note: 'Convegno fisioterapia – solo mattina disponibile.',
+  },
+  {
+    id: 'AV-003',
+    doctorId: 'dr-romano',
+    type: 'ferie',
+    dateFrom: dateStr(addDays(today, 0)),
+    dateTo: dateStr(addDays(today, 7)),
+    note: 'In ferie questa settimana.',
+  },
+  {
+    id: 'AV-004',
+    doctorId: 'dr-esposito',
+    type: 'reperibile',
+    dateFrom: dateStr(addDays(today, 5)),
+    dateTo: dateStr(addDays(today, 6)),
+    timeFrom: '08:00',
+    timeTo: '13:00',
+    note: 'Reperibile solo mattina nel weekend.',
+  },
+];
+
 @Injectable({ providedIn: 'root' })
 export class MockDataService {
   private readonly _doctors = signal<Doctor[]>(INITIAL_DOCTORS);
@@ -419,12 +534,22 @@ export class MockDataService {
   private readonly _sitePages = signal<Record<string, SitePageConfig>>(
     this._loadSitePages()
   );
+  private readonly _doctorMessages = signal<DoctorMessage[]>(INITIAL_DOCTOR_MESSAGES);
+  private readonly _doctorStatuses = signal<DoctorStatus[]>(INITIAL_DOCTOR_STATUSES);
+  private readonly _doctorAvailabilities = signal<DoctorAvailability[]>(INITIAL_DOCTOR_AVAILABILITIES);
+  private readonly _activeDoctorId = signal<string>(
+    (typeof localStorage !== 'undefined' ? localStorage.getItem('tc_active_doctor') : null) || 'dr-rossi'
+  );
 
   readonly doctors = this._doctors.asReadonly();
   readonly queue = this._queue.asReadonly();
   readonly studios = this._studios.asReadonly();
   readonly suspended = this._suspended.asReadonly();
   readonly clients = this._clients.asReadonly();
+  readonly doctorMessages = this._doctorMessages.asReadonly();
+  readonly doctorStatuses = this._doctorStatuses.asReadonly();
+  readonly doctorAvailabilities = this._doctorAvailabilities.asReadonly();
+  readonly activeDoctorId = this._activeDoctorId.asReadonly();
 
   readonly queueEnabled   = signal<boolean>(this._loadPref('tc_queue_enabled', true));
   readonly bookingEnabled = signal<boolean>(this._loadPref('tc_booking_enabled', true));
@@ -833,5 +958,77 @@ export class MockDataService {
       try { localStorage.setItem('tc_site_pages', JSON.stringify(updated)); } catch {}
       return updated;
     });
+  }
+
+  // Doctor Hub Methods
+  messagesForDoctor(doctorId: string) {
+    return computed(() =>
+      this._doctorMessages().filter(m => m.toId === doctorId || m.fromId === doctorId)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    );
+  }
+
+  unreadCountForDoctor(doctorId: string) {
+    return computed(() =>
+      this._doctorMessages().filter(m => m.toId === doctorId && !m.read).length
+    );
+  }
+
+  sendMessage(msg: Omit<DoctorMessage, 'id' | 'createdAt' | 'read'>): void {
+    const newMsg: DoctorMessage = {
+      ...msg,
+      id: 'MSG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+      createdAt: new Date(),
+      read: false,
+    };
+    this._doctorMessages.update(msgs => [...msgs, newMsg]);
+  }
+
+  markMessagesReadForDoctor(doctorId: string): void {
+    this._doctorMessages.update(msgs =>
+      msgs.map(m => m.toId === doctorId && !m.read ? { ...m, read: true } : m)
+    );
+  }
+
+  getDoctorStatus(doctorId: string): DoctorStatus | undefined {
+    return this._doctorStatuses().find(s => s.doctorId === doctorId);
+  }
+
+  setDoctorStatus(doctorId: string, status: DoctorStatusType, patientName?: string): void {
+    this._doctorStatuses.update(statuses => {
+      const exists = statuses.find(s => s.doctorId === doctorId);
+      const updated: DoctorStatus = { doctorId, status, patientName, updatedAt: new Date() };
+      return exists
+        ? statuses.map(s => s.doctorId === doctorId ? updated : s)
+        : [...statuses, updated];
+    });
+  }
+
+  addDoctorAvailability(av: Omit<DoctorAvailability, 'id'>): void {
+    const newAv: DoctorAvailability = {
+      ...av,
+      id: 'AV-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+    };
+    this._doctorAvailabilities.update(avs => [...avs, newAv]);
+  }
+
+  updateDoctorAvailability(av: DoctorAvailability): void {
+    this._doctorAvailabilities.update(avs => avs.map(a => a.id === av.id ? av : a));
+  }
+
+  deleteDoctorAvailability(id: string): void {
+    this._doctorAvailabilities.update(avs => avs.filter(a => a.id !== id));
+  }
+
+  setActiveDoctor(doctorId: string): void {
+    this._activeDoctorId.set(doctorId);
+    try { localStorage.setItem('tc_active_doctor', doctorId); } catch {}
+  }
+
+  availabilitiesForDoctor(doctorId: string) {
+    return computed(() =>
+      this._doctorAvailabilities().filter(a => a.doctorId === doctorId)
+        .sort((a, b) => a.dateFrom.localeCompare(b.dateFrom))
+    );
   }
 }

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MockDataService } from '../../core/services/mock-data.service';
 
@@ -16,6 +16,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/dashboard/clienti',     label: 'Clienti',     icon: 'users' },
   { path: '/dashboard/statistiche', label: 'Statistiche', icon: 'chart' },
   { path: '/dashboard/archivio',    label: 'Archivio',    icon: 'archive' },
+  { path: '/dashboard/medici',      label: 'Medici',      icon: 'doctors' },
 ];
 
 @Component({
@@ -66,6 +67,11 @@ const NAV_ITEMS: NavItem[] = [
               @if (item.icon === 'queue') {
                 <span class="ml-auto bg-tc-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                   {{ waitingCount().length }}
+                </span>
+              }
+              @if (item.icon === 'doctors' && doctorUnread() > 0) {
+                <span class="ml-auto bg-rose-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {{ doctorUnread() }}
                 </span>
               }
             </a>
@@ -125,7 +131,7 @@ const NAV_ITEMS: NavItem[] = [
         </div>
 
         <!-- Page content -->
-        <div class="flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-y-auto h-full">
           <router-outlet />
         </div>
       </main>
@@ -138,6 +144,9 @@ export class DashboardShellComponent {
   readonly sidebarOpen = signal(false);
   readonly waitingCount = this.mockData.waitingQueue;
   readonly suspended = this.mockData.suspended;
+  readonly doctorUnread = computed(() =>
+    this.mockData.doctorMessages().filter(m => m.fromType === 'medico' && !m.read).length
+  );
 
   toggleSidebar(): void { this.sidebarOpen.update(v => !v); }
 
@@ -181,6 +190,10 @@ export class DashboardShellComponent {
                 <path stroke-linecap="round" stroke-linejoin="round"
                   d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
               </svg>`,
+      doctors: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>`,
     };
     return icons[name] ?? icons['home'];
   }

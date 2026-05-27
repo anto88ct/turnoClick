@@ -61,6 +61,18 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
             Admin Studio
           </a>
           <a
+            routerLink="/medico"
+            routerLinkActive="bg-tc-500/20 text-tc-400"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400
+                   hover:text-white hover:bg-white/10 transition-all duration-150"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            Medico
+          </a>
+          <a
             routerLink="/admin"
             routerLinkActive="bg-tc-500/20 text-tc-400"
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400

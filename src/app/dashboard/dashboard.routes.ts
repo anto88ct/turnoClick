@@ -41,6 +41,11 @@ export const dashboardRoutes: Routes = [
         loadComponent: () =>
           import('./configuration/configuration.component').then(m => m.ConfigurationComponent),
       },
+      {
+        path: 'medici',
+        loadComponent: () =>
+          import('./medici/medici.component').then(m => m.MediciComponent),
+      },
     ],
   },
 ];

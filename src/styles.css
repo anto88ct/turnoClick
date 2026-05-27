@@ -157,6 +157,15 @@
   animation-fill-mode: both;
 }
 
+/* Slide-over drawer animation */
+@keyframes slide-drawer {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+.animate-slide-drawer {
+  animation: slide-drawer 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* CDK drag preview */
 .cdk-drag-preview {
   @apply bg-white rounded-xl shadow-2xl border border-tc-200 opacity-90;

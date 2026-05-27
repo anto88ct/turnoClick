@@ -27,6 +27,11 @@ export const routes: Routes = [
       import('./studio-admin/studio-admin.routes').then(m => m.studioAdminRoutes),
   },
   {
+    path: 'medico',
+    loadChildren: () =>
+      import('./medico/medico.routes').then(m => m.medicoRoutes),
+  },
+  {
     path: '**',
     redirectTo: '/p/studio-demo',
   },

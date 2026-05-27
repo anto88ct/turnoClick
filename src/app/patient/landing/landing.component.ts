@@ -1,20 +1,135 @@
 import { Component, inject, computed, signal } from '@angular/core';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MockDataService } from '../../core/services/mock-data.service';
 import { SiteBlockRendererComponent } from '../../shared/site-block-renderer/site-block-renderer.component';
 import { SiteBlock } from '../../core/models/site-builder.model';
 import { TcBigButtonComponent } from '../../shared/tc-big-button/tc-big-button.component';
+import { PatientAuthService } from '../auth/patient-auth.service';
+
+type AuthModal = 'login' | 'register' | null;
 
 @Component({
   selector: 'app-patient-landing',
   standalone: true,
-  imports: [RouterLink, TcBigButtonComponent, SiteBlockRendererComponent],
+  imports: [RouterLink, FormsModule, TcBigButtonComponent, SiteBlockRendererComponent],
   template: `
     <div class="min-h-[100dvh] bg-white flex flex-col">
 
+      <!-- ── Auth Modals ─────────────────────────────────────────────────────── -->
+      @if (modal()) {
+        <div class="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4"
+             (click)="modal.set(null)">
+          <div class="bg-white rounded-3xl rounded-b-3xl shadow-2xl w-full max-w-md"
+               (click)="$event.stopPropagation()">
+
+            @if (modal() === 'login') {
+              <!-- Login modal -->
+              <div class="p-6">
+                <div class="text-center mb-6">
+                  <div class="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center text-white text-lg font-extrabold"
+                       style="background-color: var(--brand)">A</div>
+                  <h2 class="text-xl font-extrabold text-slate-900">Accedi al tuo account</h2>
+                  <p class="text-sm text-slate-500 mt-1">Gestisci appuntamenti e documenti</p>
+                </div>
+                <form (submit)="doLogin(); $event.preventDefault()" class="space-y-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Email</label>
+                    <input [(ngModel)]="loginEmail" name="email" type="email" required autocomplete="email"
+                           class="tc-input-sm w-full" placeholder="mario.rossi@email.com">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Password</label>
+                    <input [(ngModel)]="loginPassword" name="password" type="password" required autocomplete="current-password"
+                           class="tc-input-sm w-full" placeholder="••••••••">
+                  </div>
+                  @if (authError()) {
+                    <div class="bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold px-4 py-3 rounded-xl">
+                      {{ authError() }}
+                    </div>
+                  }
+                  <button type="submit"
+                          class="w-full py-3.5 rounded-2xl text-white font-bold text-sm transition-opacity hover:opacity-90"
+                          style="background-color: var(--brand)">
+                    Accedi
+                  </button>
+                </form>
+                <div class="mt-5 pt-4 border-t border-slate-100 text-center">
+                  <p class="text-sm text-slate-500">
+                    Non hai un account?
+                    <button (click)="switchModal('register')" class="font-bold ml-1" style="color: var(--brand)">Registrati</button>
+                  </p>
+                </div>
+              </div>
+            }
+
+            @if (modal() === 'register') {
+              <!-- Register modal -->
+              <div class="p-6 max-h-[90dvh] overflow-y-auto">
+                <div class="text-center mb-6">
+                  <div class="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center text-white text-lg font-extrabold"
+                       style="background-color: var(--brand)">+</div>
+                  <h2 class="text-xl font-extrabold text-slate-900">Crea il tuo account</h2>
+                  <p class="text-sm text-slate-500 mt-1">Prenota, gestisci documenti e molto altro</p>
+                </div>
+                <form (submit)="doRegister(); $event.preventDefault()" class="space-y-3">
+                  <div class="grid grid-cols-1 gap-3">
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Nome completo *</label>
+                      <input [(ngModel)]="regName" name="name" required autocomplete="name"
+                             class="tc-input-sm w-full" placeholder="Mario Rossi">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Email *</label>
+                      <input [(ngModel)]="regEmail" name="email" type="email" required autocomplete="email"
+                             class="tc-input-sm w-full" placeholder="mario.rossi@email.com">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Password *</label>
+                      <input [(ngModel)]="regPassword" name="password" type="password" required autocomplete="new-password"
+                             class="tc-input-sm w-full" placeholder="Minimo 6 caratteri">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Telefono</label>
+                      <input [(ngModel)]="regPhone" name="phone" type="tel" autocomplete="tel"
+                             class="tc-input-sm w-full" placeholder="+39 340 1234567">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Data di nascita</label>
+                      <input [(ngModel)]="regDob" name="dob" type="date" class="tc-input-sm w-full">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 mb-1.5">Codice fiscale</label>
+                      <input [(ngModel)]="regFiscalCode" name="cf" class="tc-input-sm w-full font-mono uppercase" placeholder="RSSMRA80A01H501Z">
+                    </div>
+                  </div>
+                  @if (authError()) {
+                    <div class="bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold px-4 py-3 rounded-xl">
+                      {{ authError() }}
+                    </div>
+                  }
+                  <button type="submit"
+                          class="w-full py-3.5 rounded-2xl text-white font-bold text-sm transition-opacity hover:opacity-90 mt-2"
+                          style="background-color: var(--brand)">
+                    Crea account
+                  </button>
+                </form>
+                <div class="mt-5 pt-4 border-t border-slate-100 text-center">
+                  <p class="text-sm text-slate-500">
+                    Hai già un account?
+                    <button (click)="switchModal('login')" class="font-bold ml-1" style="color: var(--brand)">Accedi</button>
+                  </p>
+                </div>
+              </div>
+            }
+
+          </div>
+        </div>
+      }
+
       <!-- ── Sticky Header ────────────────────────────────────────────────── -->
       <header class="sticky top-9 z-40 bg-white border-b border-slate-200 shadow-sm">
-        <div class="flex items-center gap-3 px-4 py-3 max-w-4xl mx-auto w-full">
+        <div class="flex items-center gap-2 sm:gap-3 px-4 py-3 max-w-4xl mx-auto w-full">
           <!-- Logo / name -->
           <div class="flex items-center gap-3 flex-1 min-w-0">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow-tc flex-shrink-0"
@@ -31,12 +146,37 @@ import { TcBigButtonComponent } from '../../shared/tc-big-button/tc-big-button.c
           </div>
 
           <!-- Queue pill -->
-          <div class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-full
+          <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-full
                       border border-slate-200 flex-shrink-0 text-xs font-semibold text-slate-600">
             <div class="w-1.5 h-1.5 rounded-full animate-pulse"
                  [class]="queueEnabled() ? 'bg-amber-400' : 'bg-slate-300'"></div>
             {{ waitingCount() }} in attesa
           </div>
+
+          <!-- Auth buttons or user chip -->
+          @if (currentUser()) {
+            <a [routerLink]="['/p', slug, 'area-personale']"
+               class="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold no-underline transition-colors flex-shrink-0"
+               style="border-color: var(--brand); color: var(--brand)">
+              <div class="w-5 h-5 rounded-full text-white text-[10px] font-extrabold flex items-center justify-center flex-shrink-0"
+                   style="background-color: var(--brand)">
+                {{ currentUser()!.name.charAt(0).toUpperCase() }}
+              </div>
+              <span class="hidden sm:inline">{{ currentUser()!.name.split(' ')[0] }}</span>
+            </a>
+          } @else {
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+              <button (click)="openModal('login')"
+                      class="px-3 py-1.5 rounded-full border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+                Login
+              </button>
+              <button (click)="openModal('register')"
+                      class="px-3 py-1.5 rounded-full text-xs font-bold text-white transition-opacity hover:opacity-90"
+                      style="background-color: var(--brand)">
+                Registrati
+              </button>
+            </div>
+          }
 
           <!-- CTA button -->
           @if (queueEnabled()) {
@@ -161,6 +301,29 @@ import { TcBigButtonComponent } from '../../shared/tc-big-button/tc-big-button.c
                 Prenota un appuntamento
               </a>
             }
+
+            <!-- Area personale CTA -->
+            @if (currentUser()) {
+              <a [routerLink]="['/p', slug, 'area-personale']"
+                 class="flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm
+                        transition-colors no-underline border"
+                 style="color: var(--brand); border-color: var(--brand)">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                Area personale di {{ currentUser()!.name.split(' ')[0] }}
+              </a>
+            } @else {
+              <button (click)="openModal('register')"
+                      class="flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm
+                             transition-colors border w-full"
+                      style="color: var(--brand); border-color: var(--brand)">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                </svg>
+                Registrati per gestire appuntamenti e documenti
+              </button>
+            }
           </div>
 
         </div>
@@ -189,23 +352,93 @@ import { TcBigButtonComponent } from '../../shared/tc-big-button/tc-big-button.c
 export class PatientLandingComponent {
   private mockData = inject(MockDataService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  readonly authService = inject(PatientAuthService);
 
   get slug(): string {
     return this.route.snapshot.paramMap.get('slug') ?? 'studio-demo';
   }
 
-  get studioName(): string {
-    return 'Studio Medico Dott. Rossi';
-  }
+  get studioName(): string { return 'Studio Medico Dott. Rossi'; }
 
-  readonly waitingCount   = computed(() => this.mockData.waitingQueue().length);
-  readonly inCorsoCount   = computed(() => this.mockData.inCorsoQueue().length);
+  readonly currentUser = this.authService.currentUser;
+
+  readonly waitingCount    = computed(() => this.mockData.waitingQueue().length);
+  readonly inCorsoCount    = computed(() => this.mockData.inCorsoQueue().length);
   readonly estimatedMinutes = computed(() => this.mockData.waitingQueue().length * 15 + 5);
-  readonly queueEnabled   = computed(() => this.mockData.queueEnabled());
-  readonly bookingEnabled = computed(() => this.mockData.bookingEnabled());
+  readonly queueEnabled    = computed(() => this.mockData.queueEnabled());
+  readonly bookingEnabled  = computed(() => this.mockData.bookingEnabled());
 
   readonly siteBlocks = computed((): SiteBlock[] => {
     return this.mockData.getSitePage(this.slug).blocks
+      .filter(b => !b.disabled)
       .sort((a, b) => a.order - b.order);
   });
+
+  // Auth modal state
+  readonly modal = signal<AuthModal>(null);
+  readonly authError = signal('');
+
+  // Login form
+  loginEmail = '';
+  loginPassword = '';
+
+  // Register form
+  regName = '';
+  regEmail = '';
+  regPassword = '';
+  regPhone = '';
+  regDob = '';
+  regFiscalCode = '';
+
+  openModal(m: AuthModal): void {
+    this.authError.set('');
+    this.modal.set(m);
+  }
+
+  switchModal(m: AuthModal): void {
+    this.authError.set('');
+    this.modal.set(m);
+  }
+
+  doLogin(): void {
+    this.authError.set('');
+    if (!this.loginEmail || !this.loginPassword) {
+      this.authError.set('Compila tutti i campi.');
+      return;
+    }
+    const result = this.authService.login(this.loginEmail, this.loginPassword);
+    if (result.error) {
+      this.authError.set(result.error);
+      return;
+    }
+    this.modal.set(null);
+    this.router.navigate(['/p', this.slug, 'area-personale']);
+  }
+
+  doRegister(): void {
+    this.authError.set('');
+    if (!this.regName || !this.regEmail || !this.regPassword) {
+      this.authError.set('Nome, email e password sono obbligatori.');
+      return;
+    }
+    if (this.regPassword.length < 6) {
+      this.authError.set('La password deve essere di almeno 6 caratteri.');
+      return;
+    }
+    const result = this.authService.register({
+      name: this.regName,
+      email: this.regEmail,
+      password: this.regPassword,
+      phone: this.regPhone,
+      dateOfBirth: this.regDob,
+      fiscalCode: this.regFiscalCode,
+    });
+    if (result.error) {
+      this.authError.set(result.error);
+      return;
+    }
+    this.modal.set(null);
+    this.router.navigate(['/p', this.slug, 'area-personale']);
+  }
 }

@@ -84,6 +84,14 @@ export interface SiteBlock {
   config: BlockConfig;
   backgroundColor?: string;
   paddingY?: 'none' | 'sm' | 'md' | 'lg';
+  disabled?: boolean;
+}
+
+export interface SiteHeaderConfig {
+  logoText?: string;
+  bgColor?: string;
+  textColor?: string;
+  showQueuePill?: boolean;
 }
 
 export interface SitePageConfig {

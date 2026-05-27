@@ -26,4 +26,9 @@ export const patientRoutes: Routes = [
     loadComponent: () =>
       import('./totem/totem.component').then(m => m.TotemComponent),
   },
+  {
+    path: ':slug/area-personale',
+    loadComponent: () =>
+      import('./portal/portal.component').then(m => m.PatientPortalComponent),
+  },
 ];

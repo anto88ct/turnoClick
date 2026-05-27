@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, signal, computed, HostListener } from '@angular/core';
 import { NgStyle, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -11,14 +11,27 @@ import {
   MapBlockConfig, PhoneButtonConfig, SpacerBlockConfig, HeroBlockConfig, DividerBlockConfig
 } from '../../core/models/site-builder.model';
 
+interface BlockCategoryItem {
+  type: SiteBlockType;
+  label: string;
+  desc: string;
+  icon: string;
+}
+interface BlockCategory {
+  label: string;
+  icon: string;
+  items: BlockCategoryItem[];
+}
+interface CtxMenu { x: number; y: number; blockId: string; }
+
 @Component({
   selector: 'app-site-builder',
   standalone: true,
   imports: [NgStyle, NgClass, FormsModule, DragDropModule, TcButtonComponent, SiteBlockRendererComponent],
   template: `
-    <div class="flex flex-col h-full bg-slate-50 relative">
+    <div class="flex flex-col h-full bg-slate-50 relative" (click)="closeCtx()">
 
-      <!-- Toast notification -->
+      <!-- Toast -->
       @if (toastVisible()) {
         <div class="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2
                     text-white px-5 py-3 rounded-2xl shadow-xl text-sm font-bold
@@ -33,7 +46,7 @@ import {
 
       <!-- Delete confirm modal -->
       @if (deleteConfirmId()) {
-        <div class="absolute inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+        <div class="absolute inset-0 z-50 bg-black/40 flex items-center justify-center p-4" (click)="$event.stopPropagation()">
           <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
             <div class="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mx-auto mb-4">
               <svg class="w-6 h-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -43,66 +56,149 @@ import {
             <h3 class="text-base font-bold text-slate-900 text-center mb-1">Elimina blocco?</h3>
             <p class="text-sm text-slate-500 text-center mb-5">Questa azione non può essere annullata.</p>
             <div class="flex gap-3">
-              <button (click)="deleteConfirmId.set(null)" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
-                Annulla
-              </button>
-              <button (click)="confirmDelete()" class="flex-1 py-2.5 rounded-xl bg-rose-500 text-sm font-bold text-white hover:bg-rose-600 transition-colors">
-                Elimina
-              </button>
+              <button (click)="deleteConfirmId.set(null)" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50">Annulla</button>
+              <button (click)="confirmDelete()" class="flex-1 py-2.5 rounded-xl bg-rose-500 text-sm font-bold text-white hover:bg-rose-600">Elimina</button>
             </div>
           </div>
         </div>
       }
 
+      <!-- Context Menu -->
+      @if (ctxMenu(); as m) {
+        <div class="fixed inset-0 z-[60]" (click)="closeCtx(); $event.stopPropagation()"></div>
+        <div class="fixed z-[60] bg-white rounded-2xl shadow-2xl border border-slate-100 py-1.5 min-w-[190px] overflow-hidden"
+             [ngStyle]="{ left: m.x + 'px', top: m.y + 'px' }"
+             (click)="$event.stopPropagation()">
+          <button (click)="ctxAction('edit', m)" class="ctx-item">
+            <i class="pi pi-pencil w-4 text-center"></i> Modifica
+          </button>
+          <button (click)="ctxAction('duplicate', m)" class="ctx-item">
+            <i class="pi pi-copy w-4 text-center"></i> Duplica
+          </button>
+          <div class="h-px bg-slate-100 my-1 mx-3"></div>
+          <button (click)="ctxAction('up', m)" [disabled]="isFirst(m.blockId)"
+                  class="ctx-item disabled:opacity-40 disabled:cursor-not-allowed">
+            <i class="pi pi-arrow-up w-4 text-center"></i> Sposta su
+          </button>
+          <button (click)="ctxAction('down', m)" [disabled]="isLast(m.blockId)"
+                  class="ctx-item disabled:opacity-40 disabled:cursor-not-allowed">
+            <i class="pi pi-arrow-down w-4 text-center"></i> Sposta giù
+          </button>
+          <div class="h-px bg-slate-100 my-1 mx-3"></div>
+          <button (click)="ctxAction('toggle', m)"
+                  [class]="isDisabled(m.blockId) ? 'ctx-item text-emerald-600' : 'ctx-item text-amber-600'">
+            <i [class]="'w-4 text-center ' + (isDisabled(m.blockId) ? 'pi pi-eye' : 'pi pi-eye-slash')"></i>
+            {{ isDisabled(m.blockId) ? 'Attiva blocco' : 'Disattiva blocco' }}
+          </button>
+          <div class="h-px bg-slate-100 my-1 mx-3"></div>
+          <button (click)="ctxAction('delete', m)" class="ctx-item text-rose-600 hover:bg-rose-50">
+            <i class="pi pi-trash w-4 text-center"></i> Elimina
+          </button>
+        </div>
+      }
+
       <!-- Toolbar -->
       <div class="flex-shrink-0 bg-white border-b border-slate-200 shadow-sm z-10">
-        <!-- Top row: Add blocks -->
-        <div class="px-3 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1 whitespace-nowrap flex-shrink-0">+ Blocco:</span>
+        <div class="px-4 py-3 flex items-center gap-2">
+          <!-- Add Block Toggle -->
+          <button (click)="togglePicker($event)"
+                  [class]="showPicker() ? 'bg-tc-500 text-white border-tc-500 shadow-tc' : 'border-slate-200 text-slate-700 hover:bg-tc-50 hover:border-tc-300'"
+                  class="flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold transition-all flex-shrink-0">
+            <i [class]="showPicker() ? 'pi pi-times' : 'pi pi-plus-circle'"></i>
+            <span class="hidden sm:inline">{{ showPicker() ? 'Chiudi' : 'Aggiungi Blocco' }}</span>
+            <span class="sm:hidden">{{ showPicker() ? 'Chiudi' : 'Blocco' }}</span>
+          </button>
 
-          @for (item of blockMenu; track item.type) {
-            <button (click)="addBlock(item.type)"
-                    class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200
-                           hover:border-tc-400 hover:bg-tc-50 text-slate-600 hover:text-tc-700
-                           transition-colors text-[11px] font-bold whitespace-nowrap flex-shrink-0">
-              <i [class]="item.icon + ' text-xs'"></i>
-              {{ item.label }}
-            </button>
-          }
-        </div>
+          <div class="w-px h-5 bg-slate-200 flex-shrink-0 mx-1"></div>
 
-        <!-- Bottom row: Actions -->
-        <div class="px-3 pb-2 flex items-center justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <button (click)="toggleMobilePreview()"
-                    [class]="mobilePreview() ? 'bg-tc-100 text-tc-600 border-tc-300' : 'border-slate-200 text-slate-500 hover:bg-slate-50'"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors">
-              <i class="pi pi-mobile text-sm"></i>
-              <span class="hidden sm:inline">Mobile</span>
-            </button>
-            <button (click)="toggleDesktopPreview()"
+          <!-- Preview mode -->
+          <div class="flex gap-1 flex-shrink-0">
+            <button (click)="mobilePreview.set(false)"
                     [class]="!mobilePreview() ? 'bg-tc-100 text-tc-600 border-tc-300' : 'border-slate-200 text-slate-500 hover:bg-slate-50'"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors">
-              <i class="pi pi-desktop text-sm"></i>
+                    class="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-colors">
+              <i class="pi pi-desktop"></i>
               <span class="hidden sm:inline">Desktop</span>
             </button>
+            <button (click)="mobilePreview.set(true)"
+                    [class]="mobilePreview() ? 'bg-tc-100 text-tc-600 border-tc-300' : 'border-slate-200 text-slate-500 hover:bg-slate-50'"
+                    class="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-colors">
+              <i class="pi pi-mobile"></i>
+              <span class="hidden sm:inline">Mobile</span>
+            </button>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-400 hidden sm:block">{{ blocks().length }} blocchi</span>
-            <tc-button variant="primary" size="sm" (clicked)="savePage()">
-              <i class="pi pi-save mr-1"></i>
-              Salva Sito
-            </tc-button>
+
+          <div class="w-px h-5 bg-slate-200 flex-shrink-0 mx-1"></div>
+
+          <!-- Theme -->
+          <button (click)="toggleThemePanel($event)"
+                  [class]="showThemePanel() ? 'bg-purple-100 text-purple-700 border-purple-300' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
+                  class="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-colors flex-shrink-0">
+            <i class="pi pi-palette"></i>
+            <span class="hidden sm:inline">Tema</span>
+          </button>
+
+          <div class="flex-1"></div>
+
+          <!-- Block count + disabled badge -->
+          <div class="hidden sm:flex items-center gap-2 flex-shrink-0">
+            <span class="text-xs text-slate-400">{{ blocks().length }} blocchi</span>
+            @if (disabledCount() > 0) {
+              <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
+                {{ disabledCount() }} disabilitati
+              </span>
+            }
           </div>
+
+          <!-- Save -->
+          <tc-button variant="primary" size="sm" (clicked)="savePage()">
+            <i class="pi pi-save mr-1"></i>Salva
+          </tc-button>
         </div>
       </div>
 
-      <!-- Main Content Area -->
+      <!-- Main Content -->
       <div class="flex-1 overflow-hidden flex relative">
+
+        <!-- Block Picker Panel (left) -->
+        <div [class]="showPicker() ? 'w-72 opacity-100' : 'w-0 opacity-0 overflow-hidden'"
+             class="bg-white border-r border-slate-200 flex-shrink-0 transition-all duration-300 z-20 overflow-y-auto">
+          <div class="p-4 w-72">
+            <div class="flex items-center justify-between mb-5">
+              <h3 class="font-extrabold text-slate-800 text-sm">Aggiungi un blocco</h3>
+              <button (click)="showPicker.set(false)" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
+                <i class="pi pi-times text-xs"></i>
+              </button>
+            </div>
+
+            @for (cat of blockCategories; track cat.label) {
+              <div class="mb-5">
+                <div class="flex items-center gap-2 mb-2.5">
+                  <i [class]="cat.icon + ' text-slate-400 text-xs'"></i>
+                  <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ cat.label }}</p>
+                </div>
+                <div class="space-y-1.5">
+                  @for (item of cat.items; track item.type) {
+                    <button (click)="addBlock(item.type)"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200
+                                   hover:border-tc-400 hover:bg-tc-50 text-left transition-all group">
+                      <div class="w-9 h-9 rounded-xl bg-slate-100 group-hover:bg-tc-100 flex items-center justify-center flex-shrink-0 transition-colors">
+                        <i [class]="item.icon + ' text-slate-500 group-hover:text-tc-600 text-sm transition-colors'"></i>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-sm font-bold text-slate-800">{{ item.label }}</p>
+                        <p class="text-xs text-slate-400 leading-snug">{{ item.desc }}</p>
+                      </div>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
 
         <!-- Canvas -->
         <div class="flex-1 overflow-y-auto p-3 sm:p-6 pl-8 sm:pl-10 flex justify-center bg-slate-100/50"
-             (click)="selectedBlockId.set(null)">
+             (click)="selectedBlockId.set(null); showPicker.set(false)">
 
           <div [class]="mobilePreview()
             ? 'w-[375px] max-w-full border-x border-slate-300 shadow-2xl bg-white min-h-[812px] rounded-[2rem] overflow-hidden flex-shrink-0'
@@ -117,17 +213,14 @@ import {
               </div>
             }
 
-            <div cdkDropList
-                 [cdkDropListData]="blocks()"
-                 (cdkDropListDropped)="drop($event)"
-                 class="min-h-[200px]">
+            <div cdkDropList [cdkDropListData]="blocks()" (cdkDropListDropped)="drop($event)" class="min-h-[200px]">
 
               @if (blocks().length === 0) {
                 <div class="flex flex-col items-center justify-center h-64 text-slate-400
                             border-2 border-dashed border-slate-200 m-8 rounded-2xl">
                   <i class="pi pi-box text-4xl mb-3 text-slate-300"></i>
                   <p class="font-bold text-slate-500">Pagina vuota</p>
-                  <p class="text-xs mt-1">Aggiungi un blocco dalla toolbar superiore.</p>
+                  <p class="text-xs mt-1">Clicca "Aggiungi Blocco" nella toolbar.</p>
                 </div>
               }
 
@@ -135,8 +228,23 @@ import {
                 <div cdkDrag
                      class="group relative border-[3px] border-transparent hover:border-tc-200
                             transition-all rounded-xl mb-1 cursor-pointer"
-                     [ngClass]="{'border-tc-500 bg-tc-50': selectedBlockId() === block.id}"
-                     (click)="selectBlock(block.id, $event)">
+                     [ngClass]="{
+                       'border-tc-500': selectedBlockId() === block.id,
+                       'opacity-50 grayscale': block.disabled
+                     }"
+                     (click)="selectBlock(block.id, $event)"
+                     (contextmenu)="onCtxMenu($event, block.id)">
+
+                  <!-- Disabled overlay label -->
+                  @if (block.disabled) {
+                    <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                      <div class="bg-slate-900/70 backdrop-blur-sm text-white text-xs font-bold
+                                  px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg">
+                        <i class="pi pi-eye-slash text-xs"></i>
+                        Disabilitato — non visibile sul sito
+                      </div>
+                    </div>
+                  }
 
                   <!-- Drag handle -->
                   <div cdkDragHandle
@@ -151,50 +259,54 @@ import {
                   </div>
 
                   <!-- Type label -->
-                  <div class="absolute -top-3 left-3 px-2 py-0.5 bg-tc-500 text-white text-[9px]
+                  <div class="absolute -top-3 left-3 px-2 py-0.5 text-white text-[9px]
                               font-black uppercase tracking-widest rounded-full
                               opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none"
+                       [class]="block.disabled ? 'bg-slate-500 !opacity-100' : 'bg-tc-500'"
                        [class.!opacity-100]="selectedBlockId() === block.id">
-                    {{ getBlockLabel(block.type) }}
+                    {{ getBlockLabel(block.type) }}{{ block.disabled ? ' · Disabilitato' : '' }}
                   </div>
 
                   <!-- Actions overlay -->
                   <div class="absolute top-2 right-2 bg-white rounded-xl shadow-md
                               border border-slate-200 p-1 flex gap-0.5
                               opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                    <button (click)="moveBlock(block.id, -1, $event)"
-                            [disabled]="first"
+                    <button (click)="moveBlock(block.id, -1, $event)" [disabled]="first"
                             class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100
                                    text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             title="Sposta su">
                       <i class="pi pi-arrow-up text-xs"></i>
                     </button>
-                    <button (click)="moveBlock(block.id, 1, $event)"
-                            [disabled]="last"
+                    <button (click)="moveBlock(block.id, 1, $event)" [disabled]="last"
                             class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100
                                    text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             title="Sposta giù">
                       <i class="pi pi-arrow-down text-xs"></i>
                     </button>
                     <div class="w-px h-5 bg-slate-200 mx-0.5 my-auto"></div>
+                    <button (click)="toggleDisabled(block.id, $event)"
+                            [class]="block.disabled
+                              ? 'hover:bg-emerald-50 text-emerald-600'
+                              : 'hover:bg-amber-50 text-amber-500'"
+                            class="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+                            [title]="block.disabled ? 'Attiva blocco' : 'Disattiva blocco'">
+                      <i [class]="'text-xs ' + (block.disabled ? 'pi pi-eye' : 'pi pi-eye-slash')"></i>
+                    </button>
                     <button (click)="duplicateBlock(block.id, $event)"
-                            class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100
-                                   text-slate-500 transition-colors" title="Duplica">
+                            class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-colors" title="Duplica">
                       <i class="pi pi-copy text-xs"></i>
                     </button>
                     <button (click)="requestDelete(block.id, $event)"
-                            class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-rose-50
-                                   text-rose-500 transition-colors" title="Elimina">
+                            class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-rose-50 text-rose-500 transition-colors" title="Elimina">
                       <i class="pi pi-trash text-xs"></i>
                     </button>
                   </div>
 
-                  <!-- Rendered block (pointer-events-none so clicks reach the wrapper) -->
+                  <!-- Rendered block -->
                   <div class="pointer-events-none select-none">
                     <app-site-block-renderer [block]="block"></app-site-block-renderer>
                   </div>
 
-                  <!-- Selected highlight -->
                   @if (selectedBlockId() === block.id) {
                     <div class="absolute inset-0 bg-tc-500/3 pointer-events-none rounded-lg"></div>
                   }
@@ -204,7 +316,7 @@ import {
           </div>
         </div>
 
-        <!-- Properties Sidebar -->
+        <!-- Properties Sidebar (right) -->
         <aside class="w-80 bg-white border-l border-slate-200 overflow-y-auto flex-shrink-0
                       transition-transform duration-300
                       absolute right-0 top-0 h-full shadow-2xl
@@ -213,7 +325,6 @@ import {
                [class.lg:translate-x-0]="true">
 
           @if (showThemePanel()) {
-            <!-- Theme panel -->
             <div class="p-5">
               <div class="flex items-center justify-between mb-5 pb-4 border-b border-slate-100">
                 <div class="flex items-center gap-2">
@@ -272,13 +383,12 @@ import {
                   </div>
                   <h3 class="font-extrabold text-slate-800">{{ getBlockLabel(block.type) }}</h3>
                 </div>
-                <button (click)="selectedBlockId.set(null)"
-                        class="text-slate-400 hover:text-slate-700 p-1 lg:hidden">
+                <button (click)="selectedBlockId.set(null)" class="text-slate-400 hover:text-slate-700 p-1 lg:hidden">
                   <i class="pi pi-times"></i>
                 </button>
               </div>
 
-              <!-- Common block style options -->
+              <!-- Block style options -->
               <div class="mb-5 pb-5 border-b border-slate-100 space-y-3">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Stile blocco</p>
                 <div class="grid grid-cols-2 gap-3">
@@ -305,6 +415,24 @@ import {
                     </select>
                   </div>
                 </div>
+                <!-- Visibility toggle in sidebar -->
+                <div class="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                     [class]="block.disabled ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50 border border-slate-200'">
+                  <div>
+                    <p class="text-xs font-bold" [class]="block.disabled ? 'text-amber-700' : 'text-slate-700'">
+                      {{ block.disabled ? 'Blocco disabilitato' : 'Blocco visibile' }}
+                    </p>
+                    <p class="text-[10px]" [class]="block.disabled ? 'text-amber-600' : 'text-slate-400'">
+                      {{ block.disabled ? 'Non compare sul sito pubblico' : 'Visibile ai visitatori' }}
+                    </p>
+                  </div>
+                  <button (click)="toggleDisabledById(block.id)"
+                          [class]="block.disabled ? 'bg-amber-500 hover:bg-emerald-500' : 'bg-emerald-500 hover:bg-amber-500'"
+                          class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0">
+                    <span class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
+                          [class]="block.disabled ? 'left-0.5' : 'left-5'"></span>
+                  </button>
+                </div>
               </div>
 
               <!-- TEXT Block Properties -->
@@ -324,7 +452,7 @@ import {
                               [ngModel]="block.config['content']"
                               (ngModelChange)="updateBlockConfig('content', $event)"
                               placeholder="<p>Scrivi il tuo testo qui...</p>"></textarea>
-                    <p class="text-[10px] text-slate-400 mt-1">HTML supportato — usa i pulsanti sopra per formattare velocemente</p>
+                    <p class="text-[10px] text-slate-400 mt-1">HTML supportato — usa i pulsanti sopra</p>
                   </div>
                   <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -361,8 +489,7 @@ import {
                       @for (c of colorPresets; track c) {
                         <button (click)="updateBlockConfig('color', c)"
                                 class="w-6 h-6 rounded-full border-2 border-white shadow-sm flex-shrink-0 hover:scale-110 transition-transform"
-                                [ngStyle]="{'background-color': c}"
-                                [title]="c"></button>
+                                [ngStyle]="{'background-color': c}" [title]="c"></button>
                       }
                     </div>
                   </div>
@@ -376,21 +503,17 @@ import {
                     <label class="block text-xs font-bold text-slate-500 mb-1.5">Immagine</label>
                     @if (block.config['url']) {
                       <div class="relative mb-2 rounded-lg overflow-hidden border border-slate-200">
-                        <img [src]="block.config['url']" [alt]="block.config['alt']"
-                             class="w-full h-32 object-cover" />
+                        <img [src]="block.config['url']" [alt]="block.config['alt']" class="w-full h-32 object-cover" />
                         <button (click)="updateBlockConfig('url', '')"
-                                class="absolute top-2 right-2 w-6 h-6 bg-black/50 text-white rounded-full flex items-center justify-center text-xs hover:bg-black/80 transition-colors">
+                                class="absolute top-2 right-2 w-6 h-6 bg-black/50 text-white rounded-full flex items-center justify-center text-xs hover:bg-black/80">
                           <i class="pi pi-times"></i>
                         </button>
                       </div>
                     }
                     <label class="block w-full cursor-pointer">
                       <input type="file" accept="image/*" class="sr-only" (change)="onImageUpload($event, 'url')">
-                      <span class="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl
-                                   border-2 border-dashed border-tc-300 text-tc-600
-                                   hover:bg-tc-50 transition-colors text-sm font-semibold">
-                        <i class="pi pi-upload"></i>
-                        Carica immagine
+                      <span class="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border-2 border-dashed border-tc-300 text-tc-600 hover:bg-tc-50 transition-colors text-sm font-semibold">
+                        <i class="pi pi-upload"></i>Carica immagine
                       </span>
                     </label>
                     <p class="text-[10px] text-slate-400 mt-1.5 text-center">oppure</p>
@@ -455,8 +578,7 @@ import {
                           <input type="text" class="tc-input-sm flex-1 text-xs" [value]="img.alt"
                                  (input)="updateGalleryImage(gi, 'alt', $any($event.target).value)"
                                  placeholder="Descrizione...">
-                          <button (click)="removeGalleryImage(gi)"
-                                  class="text-slate-400 hover:text-rose-500 transition-colors flex-shrink-0">
+                          <button (click)="removeGalleryImage(gi)" class="text-slate-400 hover:text-rose-500 transition-colors flex-shrink-0">
                             <i class="pi pi-times text-xs"></i>
                           </button>
                         </div>
@@ -472,9 +594,7 @@ import {
                       @for (n of [2,3,4]; track n) {
                         <button (click)="updateBlockConfig('columns', n)"
                                 [class]="block.config['columns'] === n ? 'bg-tc-500 text-white border-tc-500' : 'border-slate-200 text-slate-600 hover:border-tc-300'"
-                                class="flex-1 py-2 rounded-lg border text-sm font-bold transition-colors">
-                          {{ n }}
-                        </button>
+                                class="flex-1 py-2 rounded-lg border text-sm font-bold transition-colors">{{ n }}</button>
                       }
                     </div>
                   </div>
@@ -512,9 +632,7 @@ import {
                       @for (r of ['16:9','4:3','1:1']; track r) {
                         <button (click)="updateBlockConfig('aspectRatio', r)"
                                 [class]="block.config['aspectRatio'] === r ? 'bg-tc-500 text-white border-tc-500' : 'border-slate-200 text-slate-600 hover:border-tc-300'"
-                                class="flex-1 py-2 rounded-lg border text-xs font-bold transition-colors">
-                          {{ r }}
-                        </button>
+                                class="flex-1 py-2 rounded-lg border text-xs font-bold transition-colors">{{ r }}</button>
                       }
                     </div>
                   </div>
@@ -599,9 +717,7 @@ import {
                       @for (a of [{v:'left',l:'Sinistra'},{v:'center',l:'Centro'},{v:'right',l:'Destra'},{v:'full',l:'Pieno'}]; track a.v) {
                         <button (click)="updateBlockConfig('align', a.v)"
                                 [class]="block.config['align'] === a.v ? 'bg-tc-500 text-white border-tc-500' : 'border-slate-200 text-slate-600'"
-                                class="flex-1 py-1.5 rounded-lg border text-[10px] font-bold transition-colors">
-                          {{ a.l }}
-                        </button>
+                                class="flex-1 py-1.5 rounded-lg border text-[10px] font-bold transition-colors">{{ a.l }}</button>
                       }
                     </div>
                   </div>
@@ -624,8 +740,7 @@ import {
                            (ngModelChange)="updateBlockConfig('height', +$event)"
                            min="8" max="200" step="4">
                     <div class="flex justify-between text-[10px] text-slate-400 mt-1">
-                      <span>8px</span>
-                      <span>200px</span>
+                      <span>8px</span><span>200px</span>
                     </div>
                   </div>
                 </div>
@@ -640,9 +755,7 @@ import {
                       @for (s of ['solid','dashed','dotted','double']; track s) {
                         <button (click)="updateBlockConfig('style', s)"
                                 [class]="block.config['style'] === s ? 'bg-tc-500 text-white border-tc-500' : 'border-slate-200 text-slate-600'"
-                                class="flex-1 py-2 rounded-lg border text-[10px] font-bold capitalize transition-colors">
-                          {{ s }}
-                        </button>
+                                class="flex-1 py-2 rounded-lg border text-[10px] font-bold capitalize transition-colors">{{ s }}</button>
                       }
                     </div>
                   </div>
@@ -676,18 +789,15 @@ import {
                       <div class="relative mb-2 rounded-lg overflow-hidden border border-slate-200">
                         <img [src]="block.config['imageUrl']" class="w-full h-28 object-cover" alt="" />
                         <button (click)="updateBlockConfig('imageUrl', '')"
-                                class="absolute top-2 right-2 w-6 h-6 bg-black/50 text-white rounded-full flex items-center justify-center text-xs hover:bg-black/80 transition-colors">
+                                class="absolute top-2 right-2 w-6 h-6 bg-black/50 text-white rounded-full flex items-center justify-center text-xs hover:bg-black/80">
                           <i class="pi pi-times"></i>
                         </button>
                       </div>
                     }
                     <label class="block w-full cursor-pointer">
                       <input type="file" accept="image/*" class="sr-only" (change)="onImageUpload($event, 'imageUrl')">
-                      <span class="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl
-                                   border-2 border-dashed border-tc-300 text-tc-600
-                                   hover:bg-tc-50 transition-colors text-sm font-semibold">
-                        <i class="pi pi-upload"></i>
-                        Carica immagine
+                      <span class="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border-2 border-dashed border-tc-300 text-tc-600 hover:bg-tc-50 transition-colors text-sm font-semibold">
+                        <i class="pi pi-upload"></i>Carica immagine
                       </span>
                     </label>
                     <input type="text" class="tc-input-sm w-full mt-2"
@@ -743,14 +853,12 @@ import {
               }
 
             </div>
-
           } @else if (!showThemePanel()) {
-            <!-- Empty state with shortcuts -->
             <div class="flex flex-col items-center justify-center h-full text-slate-400 p-8 text-center">
               <i class="pi pi-sliders-h text-4xl mb-4 text-slate-200"></i>
               <p class="font-bold text-slate-500 mb-1">Nessun blocco selezionato</p>
-              <p class="text-xs mt-1 mb-6">Clicca su un blocco per modificarlo, oppure aggiungi un nuovo blocco dalla toolbar.</p>
-              <button (click)="showThemePanel.set(true)"
+              <p class="text-xs mt-1 mb-6">Clicca su un blocco per modificarlo, o tasto destro per il menu rapido.</p>
+              <button (click)="openThemePanel($event)"
                       class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200
                              text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:border-tc-300 transition-colors">
                 <i class="pi pi-palette text-tc-500"></i>
@@ -758,12 +866,11 @@ import {
               </button>
             </div>
           }
-
         </aside>
 
       </div>
     </div>
-  `
+  `,
 })
 export class SiteBuilderComponent {
   private mockData = inject(MockDataService);
@@ -776,33 +883,57 @@ export class SiteBuilderComponent {
   readonly toastVisible = signal(false);
   readonly deleteConfirmId = signal<string | null>(null);
   readonly showThemePanel = signal(false);
+  readonly showPicker = signal(false);
+  readonly ctxMenu = signal<CtxMenu | null>(null);
 
   readonly selectedBlock = computed(() => {
     const id = this.selectedBlockId();
     return id ? (this.blocks().find(b => b.id === id) ?? null) : null;
   });
 
-  readonly blockMenu = [
-    { type: 'hero' as SiteBlockType, label: 'Hero', icon: 'pi pi-image' },
-    { type: 'text' as SiteBlockType, label: 'Testo', icon: 'pi pi-align-left' },
-    { type: 'image' as SiteBlockType, label: 'Immagine', icon: 'pi pi-camera' },
-    { type: 'gallery' as SiteBlockType, label: 'Galleria', icon: 'pi pi-images' },
-    { type: 'video' as SiteBlockType, label: 'Video', icon: 'pi pi-video' },
-    { type: 'map' as SiteBlockType, label: 'Mappa', icon: 'pi pi-map-marker' },
-    { type: 'phone-button' as SiteBlockType, label: 'Telefono', icon: 'pi pi-phone' },
-    { type: 'divider' as SiteBlockType, label: 'Divisore', icon: 'pi pi-minus' },
-    { type: 'spacer' as SiteBlockType, label: 'Spazio', icon: 'pi pi-arrows-v' },
+  readonly disabledCount = computed(() => this.blocks().filter(b => b.disabled).length);
+
+  readonly blockCategories: BlockCategory[] = [
+    {
+      label: 'Contenuto',
+      icon: 'pi pi-file-edit',
+      items: [
+        { type: 'hero',  label: 'Hero Banner', desc: 'Copertina con immagine e titolo', icon: 'pi pi-image' },
+        { type: 'text',  label: 'Testo',        desc: 'Paragrafo, titoli, HTML formattato', icon: 'pi pi-align-left' },
+      ]
+    },
+    {
+      label: 'Media',
+      icon: 'pi pi-images',
+      items: [
+        { type: 'image',   label: 'Immagine',  desc: 'Foto singola con didascalia', icon: 'pi pi-camera' },
+        { type: 'gallery', label: 'Galleria',  desc: 'Griglia di più immagini',     icon: 'pi pi-images' },
+        { type: 'video',   label: 'Video',     desc: 'YouTube o Vimeo incorporato', icon: 'pi pi-video' },
+      ]
+    },
+    {
+      label: 'Interazione',
+      icon: 'pi pi-bolt',
+      items: [
+        { type: 'phone-button', label: 'Pulsante Telefono', desc: 'Bottone click-to-call', icon: 'pi pi-phone' },
+        { type: 'map',          label: 'Mappa',             desc: 'Google Maps incorporato', icon: 'pi pi-map-marker' },
+      ]
+    },
+    {
+      label: 'Layout',
+      icon: 'pi pi-th-large',
+      items: [
+        { type: 'divider', label: 'Divisore',     desc: 'Linea di separazione',      icon: 'pi pi-minus' },
+        { type: 'spacer',  label: 'Spazio Vuoto', desc: 'Distanza configurabile',    icon: 'pi pi-arrows-v' },
+      ]
+    },
   ];
 
   readonly textFormats = [
-    { label: 'Titolo H1', wrap: 'h1' },
-    { label: 'Titolo H2', wrap: 'h2' },
-    { label: 'Titolo H3', wrap: 'h3' },
-    { label: 'Paragrafo', wrap: 'p' },
-    { label: 'Bold', wrap: 'strong' },
-    { label: 'Italic', wrap: 'em' },
-    { label: 'Lista •', wrap: 'ul-li' },
-    { label: 'Lista 1.', wrap: 'ol-li' },
+    { label: 'Titolo H1', wrap: 'h1' }, { label: 'Titolo H2', wrap: 'h2' },
+    { label: 'Titolo H3', wrap: 'h3' }, { label: 'Paragrafo', wrap: 'p' },
+    { label: 'Bold', wrap: 'strong' },  { label: 'Italic', wrap: 'em' },
+    { label: 'Lista •', wrap: 'ul-li' },{ label: 'Lista 1.', wrap: 'ol-li' },
   ];
 
   readonly colorPresets = [
@@ -810,8 +941,29 @@ export class SiteBuilderComponent {
     '#8b5cf6', '#ef4444', '#f59e0b', '#ffffff',
   ];
 
-  constructor() {
-    this.loadPage();
+  constructor() { this.loadPage(); }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeCtx();
+    this.showPicker.set(false);
+  }
+
+  togglePicker(event: Event): void {
+    event.stopPropagation();
+    this.showPicker.update(v => !v);
+  }
+
+  toggleThemePanel(event: Event): void {
+    event.stopPropagation();
+    this.showThemePanel.update(v => !v);
+    this.selectedBlockId.set(null);
+    this.showPicker.set(false);
+  }
+
+  openThemePanel(event: Event): void {
+    event.stopPropagation();
+    this.showThemePanel.set(true);
   }
 
   loadPage(): void {
@@ -822,73 +974,73 @@ export class SiteBuilderComponent {
   }
 
   savePage(): void {
-    const pageConfig: SitePageConfig = {
-      blocks: this.blocks(),
-      theme: this.themeConfig()
-    };
+    const pageConfig: SitePageConfig = { blocks: this.blocks(), theme: this.themeConfig() };
     this.mockData.saveSitePage(this.studioSlug, pageConfig);
     this.toastVisible.set(true);
     setTimeout(() => this.toastVisible.set(false), 3000);
   }
 
-  toggleMobilePreview(): void { this.mobilePreview.set(true); }
-  toggleDesktopPreview(): void { this.mobilePreview.set(false); }
-
   selectBlock(id: string, event: Event): void {
     event.stopPropagation();
     this.selectedBlockId.set(id);
     this.showThemePanel.set(false);
+    this.showPicker.set(false);
   }
+
+  // ── Context menu ────────────────────────────────────────────────────────────
+
+  onCtxMenu(event: MouseEvent, blockId: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const mw = 200, mh = 260;
+    const x = event.clientX + mw > window.innerWidth  ? event.clientX - mw : event.clientX + 4;
+    const y = event.clientY + mh > window.innerHeight ? event.clientY - mh : event.clientY + 4;
+    this.ctxMenu.set({ x, y, blockId });
+  }
+
+  closeCtx(): void { this.ctxMenu.set(null); }
+
+  ctxAction(action: string, m: CtxMenu): void {
+    this.closeCtx();
+    switch (action) {
+      case 'edit':
+        this.selectedBlockId.set(m.blockId);
+        this.showThemePanel.set(false);
+        this.showPicker.set(false);
+        break;
+      case 'duplicate': this.duplicateBlock(m.blockId); break;
+      case 'up':        this.moveBlock(m.blockId, -1); break;
+      case 'down':      this.moveBlock(m.blockId, 1); break;
+      case 'toggle':    this.toggleDisabledById(m.blockId); break;
+      case 'delete':    this.deleteConfirmId.set(m.blockId); break;
+    }
+  }
+
+  isFirst(id: string): boolean { return this.blocks()[0]?.id === id; }
+  isLast(id: string): boolean  { return this.blocks()[this.blocks().length - 1]?.id === id; }
+  isDisabled(id: string): boolean { return this.blocks().find(b => b.id === id)?.disabled ?? false; }
+
+  // ── Block operations ────────────────────────────────────────────────────────
 
   addBlock(type: SiteBlockType): void {
     const newId = `block-${type}-${Date.now()}`;
     let config: any = {};
-
     switch (type) {
-      case 'text':
-        config = { content: '<p>Scrivi qui il tuo testo...</p>', align: 'left', fontSize: 'normal', color: '#1e293b' } as TextBlockConfig;
-        break;
-      case 'image':
-        config = { url: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&q=80', alt: 'Immagine studio', width: 'full', borderRadius: 'md' } as ImageBlockConfig;
-        break;
-      case 'gallery':
-        config = { images: [], columns: 3, borderRadius: 'md' } as GalleryBlockConfig;
-        break;
-      case 'video':
-        config = { url: '', aspectRatio: '16:9' } as VideoBlockConfig;
-        break;
-      case 'map':
-        config = { address: '', embedUrl: '', height: 350 } as MapBlockConfig;
-        break;
-      case 'phone-button':
-        config = { phoneNumber: '', label: 'Chiama lo Studio', color: 'primary', icon: true, size: 'md', align: 'center' } as PhoneButtonConfig;
-        break;
-      case 'spacer':
-        config = { height: 32 } as SpacerBlockConfig;
-        break;
-      case 'divider':
-        config = { style: 'solid', color: '#e2e8f0', thickness: 1 } as DividerBlockConfig;
-        break;
-      case 'hero':
-        config = {
-          title: 'Benvenuti nel nostro Studio',
-          subtitle: 'Prenota la tua visita o entra in coda digitale in pochi secondi.',
-          imageUrl: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1200&q=80',
-          overlayOpacity: 0.5,
-          minHeight: 380,
-          textAlign: 'center'
-        } as HeroBlockConfig;
-        break;
+      case 'text':         config = { content: '<p>Scrivi qui il tuo testo...</p>', align: 'left', fontSize: 'normal', color: '#1e293b' }; break;
+      case 'image':        config = { url: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&q=80', alt: 'Immagine studio', width: 'full', borderRadius: 'md' }; break;
+      case 'gallery':      config = { images: [], columns: 3, borderRadius: 'md' }; break;
+      case 'video':        config = { url: '', aspectRatio: '16:9' }; break;
+      case 'map':          config = { address: '', embedUrl: '', height: 350 }; break;
+      case 'phone-button': config = { phoneNumber: '', label: 'Chiama lo Studio', color: 'primary', icon: true, size: 'md', align: 'center' }; break;
+      case 'spacer':       config = { height: 32 }; break;
+      case 'divider':      config = { style: 'solid', color: '#e2e8f0', thickness: 1 }; break;
+      case 'hero':         config = { title: 'Benvenuti nel nostro Studio', subtitle: 'Prenota la tua visita o entra in coda digitale in pochi secondi.', imageUrl: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1200&q=80', overlayOpacity: 0.5, minHeight: 380, textAlign: 'center' }; break;
     }
-
     const newBlock: SiteBlock = { id: newId, type, order: this.blocks().length, config, paddingY: 'md' };
     this.blocks.update(b => [...b, newBlock]);
     this.selectedBlockId.set(newId);
     this.showThemePanel.set(false);
-
-    setTimeout(() => {
-      document.querySelector('.overflow-y-auto')?.scrollTo({ top: 99999, behavior: 'smooth' });
-    }, 50);
+    setTimeout(() => document.querySelector('.overflow-y-auto')?.scrollTo({ top: 99999, behavior: 'smooth' }), 50);
   }
 
   requestDelete(id: string, event: Event): void {
@@ -904,24 +1056,17 @@ export class SiteBuilderComponent {
     this.deleteConfirmId.set(null);
   }
 
-  duplicateBlock(id: string, event: Event): void {
-    event.stopPropagation();
+  duplicateBlock(id: string, event?: Event): void {
+    event?.stopPropagation();
     const block = this.blocks().find(b => b.id === id);
     if (!block) return;
-    const copy: SiteBlock = {
-      ...JSON.parse(JSON.stringify(block)),
-      id: `block-${block.type}-${Date.now()}`,
-      order: block.order + 0.5
-    };
-    this.blocks.update(b => {
-      const arr = [...b, copy].sort((a, x) => a.order - x.order);
-      return this.recalcOrder(arr);
-    });
+    const copy: SiteBlock = { ...JSON.parse(JSON.stringify(block)), id: `block-${block.type}-${Date.now()}`, order: block.order + 0.5 };
+    this.blocks.update(b => this.recalcOrder([...b, copy].sort((a, x) => a.order - x.order)));
     this.selectedBlockId.set(copy.id);
   }
 
-  moveBlock(id: string, direction: 1 | -1, event: Event): void {
-    event.stopPropagation();
+  moveBlock(id: string, direction: 1 | -1, event?: Event): void {
+    event?.stopPropagation();
     const arr = [...this.blocks()];
     const idx = arr.findIndex(b => b.id === id);
     const newIdx = idx + direction;
@@ -929,6 +1074,15 @@ export class SiteBuilderComponent {
       moveItemInArray(arr, idx, newIdx);
       this.blocks.set(this.recalcOrder(arr));
     }
+  }
+
+  toggleDisabled(id: string, event: Event): void {
+    event.stopPropagation();
+    this.toggleDisabledById(id);
+  }
+
+  toggleDisabledById(id: string): void {
+    this.blocks.update(blocks => blocks.map(b => b.id !== id ? b : { ...b, disabled: !b.disabled }));
   }
 
   drop(event: CdkDragDrop<SiteBlock[]>): void {
@@ -940,17 +1094,13 @@ export class SiteBuilderComponent {
   updateBlockConfig(key: string, value: any): void {
     const id = this.selectedBlockId();
     if (!id) return;
-    this.blocks.update(blocks =>
-      blocks.map(b => b.id !== id ? b : { ...b, config: { ...b.config, [key]: value } })
-    );
+    this.blocks.update(blocks => blocks.map(b => b.id !== id ? b : { ...b, config: { ...b.config, [key]: value } }));
   }
 
   updateBlockProp(key: keyof SiteBlock, value: any): void {
     const id = this.selectedBlockId();
     if (!id) return;
-    this.blocks.update(blocks =>
-      blocks.map(b => b.id !== id ? b : { ...b, [key]: value })
-    );
+    this.blocks.update(blocks => blocks.map(b => b.id !== id ? b : { ...b, [key]: value }));
   }
 
   updateTheme(key: string, value: string): void {
@@ -962,23 +1112,16 @@ export class SiteBuilderComponent {
     if (!id) return;
     const current = this.blocks().find(b => b.id === id)?.config['content'] || '';
     let newContent = current;
-    if (wrap === 'ul-li') {
-      newContent = current + '\n<ul>\n  <li>Elemento lista</li>\n</ul>';
-    } else if (wrap === 'ol-li') {
-      newContent = current + '\n<ol>\n  <li>Primo elemento</li>\n</ol>';
-    } else {
-      newContent = current + `\n<${wrap}>Nuovo contenuto</${wrap}>`;
-    }
+    if (wrap === 'ul-li')      newContent = current + '\n<ul>\n  <li>Elemento lista</li>\n</ul>';
+    else if (wrap === 'ol-li') newContent = current + '\n<ol>\n  <li>Primo elemento</li>\n</ol>';
+    else                       newContent = current + `\n<${wrap}>Nuovo contenuto</${wrap}>`;
     this.updateBlockConfig('content', newContent);
   }
 
   onImageUpload(event: Event, configKey: string): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Immagine troppo grande. Max 5 MB.');
-      return;
-    }
+    if (file.size > 5 * 1024 * 1024) { alert('Immagine troppo grande. Max 5 MB.'); return; }
     const reader = new FileReader();
     reader.onload = e => this.updateBlockConfig(configKey, e.target?.result as string);
     reader.readAsDataURL(file);
@@ -993,16 +1136,13 @@ export class SiteBuilderComponent {
     const current: any[] = this.blocks().find(b => b.id === id)?.config['images'] || [];
     let processed = 0;
     const newImages: any[] = [...current];
-
     files.forEach(file => {
       if (file.size > 5 * 1024 * 1024) return;
       const reader = new FileReader();
       reader.onload = e => {
         newImages.push({ url: e.target?.result as string, alt: file.name.replace(/\.[^.]+$/, ''), caption: '' });
         processed++;
-        if (processed === files.length) {
-          this.updateBlockConfig('images', newImages);
-        }
+        if (processed === files.length) this.updateBlockConfig('images', newImages);
       };
       reader.readAsDataURL(file);
     });
@@ -1029,17 +1169,10 @@ export class SiteBuilderComponent {
   }
 
   getBlockIcon(type: SiteBlockType): string {
-    return ({
-      text: 'pi pi-align-left', image: 'pi pi-camera', gallery: 'pi pi-images',
-      video: 'pi pi-video', map: 'pi pi-map-marker', 'phone-button': 'pi pi-phone',
-      spacer: 'pi pi-arrows-v', hero: 'pi pi-image', divider: 'pi pi-minus'
-    })[type] || 'pi pi-box';
+    return ({ text: 'pi pi-align-left', image: 'pi pi-camera', gallery: 'pi pi-images', video: 'pi pi-video', map: 'pi pi-map-marker', 'phone-button': 'pi pi-phone', spacer: 'pi pi-arrows-v', hero: 'pi pi-image', divider: 'pi pi-minus' })[type] || 'pi pi-box';
   }
 
   getBlockLabel(type: SiteBlockType): string {
-    return ({
-      text: 'Testo', image: 'Immagine', gallery: 'Galleria', video: 'Video',
-      map: 'Mappa', 'phone-button': 'Telefono', spacer: 'Spazio', hero: 'Hero', divider: 'Divisore'
-    })[type] || 'Blocco';
+    return ({ text: 'Testo', image: 'Immagine', gallery: 'Galleria', video: 'Video', map: 'Mappa', 'phone-button': 'Telefono', spacer: 'Spazio', hero: 'Hero', divider: 'Divisore' })[type] || 'Blocco';
   }
 }

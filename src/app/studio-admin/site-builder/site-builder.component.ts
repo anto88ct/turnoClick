@@ -7,8 +7,10 @@ import { TcButtonComponent } from '../../shared/tc-button/tc-button.component';
 import { SiteBlockRendererComponent } from '../../shared/site-block-renderer/site-block-renderer.component';
 import {
   SiteBlock, SiteBlockType, SitePageConfig, PublicViewConfig,
+  SiteHeaderConfig, SiteFooterConfig, SiteMenuItemConfig,
   TextBlockConfig, ImageBlockConfig, GalleryBlockConfig, VideoBlockConfig,
-  MapBlockConfig, PhoneButtonConfig, SpacerBlockConfig, HeroBlockConfig, DividerBlockConfig
+  MapBlockConfig, PhoneButtonConfig, SpacerBlockConfig, HeroBlockConfig, DividerBlockConfig,
+  ColumnsBlockConfig
 } from '../../core/models/site-builder.model';
 
 interface BlockCategoryItem {
@@ -137,12 +139,35 @@ interface CtxMenu { x: number; y: number; blockId: string; }
             <span class="hidden sm:inline">Tema</span>
           </button>
 
+          <!-- Header config -->
+          <button (click)="toggleHeaderPanel($event)"
+                  [class]="showHeaderPanel() ? 'bg-blue-100 text-blue-700 border-blue-300' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
+                  class="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-colors flex-shrink-0">
+            <i class="pi pi-window-maximize"></i>
+            <span class="hidden sm:inline">Header</span>
+          </button>
+
+          <!-- Footer config -->
+          <button (click)="toggleFooterPanel($event)"
+                  [class]="showFooterPanel() ? 'bg-slate-700 text-white border-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
+                  class="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-colors flex-shrink-0">
+            <i class="pi pi-window-minimize"></i>
+            <span class="hidden sm:inline">Footer</span>
+          </button>
+
           <!-- Public View Config -->
           <button (click)="togglePublicViewPanel($event)"
                   [class]="showPublicViewPanel() ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
                   class="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-colors flex-shrink-0">
             <i class="pi pi-eye"></i>
             <span class="hidden sm:inline">Vista pubblica</span>
+          </button>
+
+          <!-- Reset demo -->
+          <button (click)="resetToAndromedaDemo()"
+                  class="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-rose-200 text-rose-500 hover:bg-rose-50 text-xs font-semibold transition-colors flex-shrink-0">
+            <i class="pi pi-refresh"></i>
+            <span class="hidden sm:inline">Demo</span>
           </button>
 
           <div class="flex-1"></div>
@@ -329,8 +354,255 @@ interface CtxMenu { x: number; y: number; blockId: string; }
                       transition-transform duration-300
                       absolute right-0 top-0 h-full shadow-2xl
                       lg:relative lg:shadow-none z-30"
-               [class.translate-x-full]="!selectedBlock() && !showThemePanel() && !showPublicViewPanel()"
+               [class.translate-x-full]="!selectedBlock() && !showThemePanel() && !showPublicViewPanel() && !showHeaderPanel() && !showFooterPanel()"
                [class.lg:translate-x-0]="true">
+
+          <!-- ── HEADER PANEL ──────────────────────────────────────── -->
+          @if (showHeaderPanel()) {
+            <div class="p-5">
+              <div class="flex items-center justify-between mb-5 pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                    <i class="pi pi-window-maximize text-sm"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-extrabold text-slate-800 leading-tight">Header Sito</h3>
+                    <p class="text-[10px] text-slate-400">Logo, menu, CTA</p>
+                  </div>
+                </div>
+                <button (click)="showHeaderPanel.set(false)" class="text-slate-400 hover:text-slate-700 p-1">
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+              <div class="space-y-4">
+
+                <!-- Logo text -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Nome / Testo logo</label>
+                  <input type="text" class="tc-input-sm w-full"
+                         [ngModel]="headerConfig().logoText"
+                         (ngModelChange)="updateHeaderField('logoText', $event)"
+                         placeholder="Es. Studio Andromeda">
+                </div>
+
+                <!-- Logo URL -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Logo immagine (URL)</label>
+                  @if (headerConfig().logoUrl) {
+                    <div class="flex items-center gap-2 mb-2 p-2 bg-slate-50 rounded-xl border border-slate-200">
+                      <img [src]="headerConfig().logoUrl" class="h-8 object-contain" alt="Logo preview">
+                      <button (click)="updateHeaderField('logoUrl', '')"
+                              class="ml-auto text-rose-400 hover:text-rose-600 text-xs">
+                        <i class="pi pi-times"></i>
+                      </button>
+                    </div>
+                  }
+                  <input type="text" class="tc-input-sm w-full"
+                         [ngModel]="headerConfig().logoUrl"
+                         (ngModelChange)="updateHeaderField('logoUrl', $event)"
+                         placeholder="https://... (lascia vuoto per usare solo il testo)">
+                </div>
+
+                <!-- Colors -->
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Sfondo header</label>
+                    <div class="flex gap-2">
+                      <input type="color"
+                             [ngModel]="headerConfig().bgColor || '#ffffff'"
+                             (ngModelChange)="updateHeaderField('bgColor', $event)"
+                             class="w-9 h-9 p-0.5 border border-slate-200 rounded-lg cursor-pointer flex-shrink-0">
+                      <input type="text" class="tc-input-sm flex-1 font-mono text-xs"
+                             [ngModel]="headerConfig().bgColor || '#ffffff'"
+                             (ngModelChange)="updateHeaderField('bgColor', $event)">
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Colore testo</label>
+                    <div class="flex gap-2">
+                      <input type="color"
+                             [ngModel]="headerConfig().textColor || '#1e293b'"
+                             (ngModelChange)="updateHeaderField('textColor', $event)"
+                             class="w-9 h-9 p-0.5 border border-slate-200 rounded-lg cursor-pointer flex-shrink-0">
+                      <input type="text" class="tc-input-sm flex-1 font-mono text-xs"
+                             [ngModel]="headerConfig().textColor || '#1e293b'"
+                             (ngModelChange)="updateHeaderField('textColor', $event)">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CTA button -->
+                <div class="pt-1 pb-1 border-t border-slate-100">
+                  <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide mb-3">Bottone CTA header</p>
+                  <div class="space-y-2">
+                    <input type="text" class="tc-input-sm w-full"
+                           [ngModel]="headerConfig().ctaLabel"
+                           (ngModelChange)="updateHeaderField('ctaLabel', $event)"
+                           placeholder="Es. Prenota Visita">
+                    <input type="text" class="tc-input-sm w-full"
+                           [ngModel]="headerConfig().ctaLink"
+                           (ngModelChange)="updateHeaderField('ctaLink', $event)"
+                           placeholder="Es. #prenota">
+                  </div>
+                </div>
+
+                <!-- Menu items -->
+                <div class="pt-1 border-t border-slate-100">
+                  <div class="flex items-center justify-between mb-3">
+                    <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">Voci menu</p>
+                    <button (click)="addMenuItem()"
+                            class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200 transition-colors">
+                      <i class="pi pi-plus text-[10px]"></i> Aggiungi
+                    </button>
+                  </div>
+                  <div class="space-y-2">
+                    @for (item of headerConfig().menuItems ?? []; track item.label; let i = $index) {
+                      <div class="flex items-center gap-2">
+                        <input type="text" class="tc-input-sm flex-1 text-xs"
+                               [ngModel]="item.label"
+                               (ngModelChange)="updateMenuItem(i, 'label', $event)"
+                               placeholder="Label">
+                        <input type="text" class="tc-input-sm w-24 text-xs font-mono"
+                               [ngModel]="item.href"
+                               (ngModelChange)="updateMenuItem(i, 'href', $event)"
+                               placeholder="#link">
+                        <button (click)="removeMenuItem(i)"
+                                class="w-7 h-7 flex items-center justify-center rounded-lg text-rose-400 hover:bg-rose-50 transition-colors flex-shrink-0">
+                          <i class="pi pi-times text-xs"></i>
+                        </button>
+                      </div>
+                    }
+                    @if ((headerConfig().menuItems ?? []).length === 0) {
+                      <p class="text-xs text-slate-400 text-center py-3">Nessuna voce di menu. Clicca "Aggiungi" per iniziare.</p>
+                    }
+                  </div>
+                </div>
+
+                <button (click)="saveHeaderConfig()"
+                        class="w-full py-3 rounded-xl font-extrabold text-sm transition-all"
+                        [class]="headerSaved() ? 'bg-emerald-500 text-white' : 'text-white hover:opacity-90'"
+                        [style]="headerSaved() ? '' : 'background-color: var(--brand)'">
+                  @if (headerSaved()) {
+                    <span class="flex items-center justify-center gap-1.5">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      Header salvato!
+                    </span>
+                  } @else {
+                    Salva header
+                  }
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- ── FOOTER PANEL ──────────────────────────────────────── -->
+          @if (showFooterPanel()) {
+            <div class="p-5">
+              <div class="flex items-center justify-between mb-5 pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-white">
+                    <i class="pi pi-window-minimize text-sm"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-extrabold text-slate-800 leading-tight">Footer Sito</h3>
+                    <p class="text-[10px] text-slate-400">Dati studio, contatti, orari</p>
+                  </div>
+                </div>
+                <button (click)="showFooterPanel.set(false)" class="text-slate-400 hover:text-slate-700 p-1">
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+              <div class="space-y-3">
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Indirizzo</label>
+                  <input type="text" class="tc-input-sm w-full"
+                         [ngModel]="footerConfig().address"
+                         (ngModelChange)="updateFooterField('address', $event)"
+                         placeholder="Via Roma 1, 95024 Acireale (CT)">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Email</label>
+                  <input type="email" class="tc-input-sm w-full"
+                         [ngModel]="footerConfig().email"
+                         (ngModelChange)="updateFooterField('email', $event)"
+                         placeholder="info@studio.it">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Telefono</label>
+                  <input type="tel" class="tc-input-sm w-full"
+                         [ngModel]="footerConfig().phone"
+                         (ngModelChange)="updateFooterField('phone', $event)"
+                         placeholder="+39 095 123456">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Partita IVA</label>
+                  <input type="text" class="tc-input-sm w-full font-mono"
+                         [ngModel]="footerConfig().vatNumber"
+                         (ngModelChange)="updateFooterField('vatNumber', $event)"
+                         placeholder="IT12345678901">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Orari di apertura</label>
+                  <textarea class="tc-input-sm w-full resize-y text-xs"
+                            [ngModel]="footerConfig().hours"
+                            (ngModelChange)="updateFooterField('hours', $event)"
+                            rows="2"
+                            placeholder="Lun–Ven 9:00–19:00"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Instagram URL</label>
+                    <input type="url" class="tc-input-sm w-full text-xs"
+                           [ngModel]="footerConfig().instagramUrl"
+                           (ngModelChange)="updateFooterField('instagramUrl', $event)"
+                           placeholder="https://instagram.com/...">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Facebook URL</label>
+                    <input type="url" class="tc-input-sm w-full text-xs"
+                           [ngModel]="footerConfig().facebookUrl"
+                           (ngModelChange)="updateFooterField('facebookUrl', $event)"
+                           placeholder="https://facebook.com/...">
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Sfondo footer</label>
+                    <input type="color"
+                           [ngModel]="footerConfig().bgColor || '#0f172a'"
+                           (ngModelChange)="updateFooterField('bgColor', $event)"
+                           class="w-full h-9 p-0.5 border border-slate-200 rounded-lg cursor-pointer">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Colore testo</label>
+                    <input type="color"
+                           [ngModel]="footerConfig().textColor || '#f1f5f9'"
+                           (ngModelChange)="updateFooterField('textColor', $event)"
+                           class="w-full h-9 p-0.5 border border-slate-200 rounded-lg cursor-pointer">
+                  </div>
+                </div>
+
+                <button (click)="saveFooterConfig()"
+                        class="w-full py-3 rounded-xl font-extrabold text-sm transition-all"
+                        [class]="footerSaved() ? 'bg-emerald-500 text-white' : 'text-white hover:opacity-90'"
+                        [style]="footerSaved() ? '' : 'background-color: var(--brand)'">
+                  @if (footerSaved()) {
+                    <span class="flex items-center justify-center gap-1.5">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      Footer salvato!
+                    </span>
+                  } @else {
+                    Salva footer
+                  }
+                </button>
+              </div>
+            </div>
+          }
 
           @if (showPublicViewPanel()) {
             <div class="p-5">
@@ -1002,8 +1274,72 @@ interface CtxMenu { x: number; y: number; blockId: string; }
                 </div>
               }
 
+            <!-- COLUMNS Block Properties -->
+              @if (block.type === 'columns') {
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Posizione immagine</label>
+                    <div class="grid grid-cols-2 gap-2">
+                      @for (opt of [['image-left','← Immagine sinistra'],['image-right','Immagine destra →']]; track opt[0]) {
+                        <button (click)="updateBlockConfig('layout', opt[0])"
+                                [class]="block.config['layout'] === opt[0] ? 'bg-tc-500 text-white border-tc-500' : 'border-slate-200 text-slate-600'"
+                                class="py-2 rounded-xl border text-xs font-bold transition-colors">{{ opt[1] }}</button>
+                      }
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Immagine</label>
+                    @if (block.config['imageUrl']) {
+                      <div class="relative mb-2 rounded-lg overflow-hidden border border-slate-200">
+                        <img [src]="block.config['imageUrl']" class="w-full h-28 object-cover" alt="" />
+                        <button (click)="updateBlockConfig('imageUrl', '')"
+                                class="absolute top-2 right-2 w-6 h-6 bg-black/50 text-white rounded-full flex items-center justify-center text-xs hover:bg-black/80">
+                          <i class="pi pi-times"></i>
+                        </button>
+                      </div>
+                    }
+                    <label class="block w-full cursor-pointer">
+                      <input type="file" accept="image/*" class="sr-only" (change)="onImageUpload($event, 'imageUrl')">
+                      <span class="flex items-center justify-center gap-2 w-full py-2 rounded-xl border-2 border-dashed border-tc-300 text-tc-600 hover:bg-tc-50 transition-colors text-xs font-semibold">
+                        <i class="pi pi-upload"></i>Carica
+                      </span>
+                    </label>
+                    <input type="text" class="tc-input-sm w-full mt-1.5"
+                           [ngModel]="block.config['imageUrl']"
+                           (ngModelChange)="updateBlockConfig('imageUrl', $event)"
+                           placeholder="oppure incolla URL...">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Testo (HTML supportato)</label>
+                    <textarea class="tc-input-sm w-full min-h-[120px] font-mono text-xs resize-y"
+                              [ngModel]="block.config['content']"
+                              (ngModelChange)="updateBlockConfig('content', $event)"></textarea>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Larghezza immagine</label>
+                    <div class="flex gap-2">
+                      @for (pct of [40, 50, 60]; track pct) {
+                        <button (click)="updateBlockConfig('imageWidthPercent', pct)"
+                                [class]="block.config['imageWidthPercent'] === pct ? 'bg-tc-500 text-white border-tc-500' : 'border-slate-200 text-slate-600'"
+                                class="flex-1 py-2 rounded-xl border text-xs font-bold transition-colors">{{ pct }}%</button>
+                      }
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Bordi immagine</label>
+                    <div class="grid grid-cols-4 gap-1.5">
+                      @for (opt of [['none','Nessuno'],['md','Arrot.'],['lg','Largo'],['full','Pieno']]; track opt[0]) {
+                        <button (click)="updateBlockConfig('imageRounded', opt[0])"
+                                [class]="block.config['imageRounded'] === opt[0] ? 'bg-tc-500 text-white border-tc-500' : 'border-slate-200 text-slate-600'"
+                                class="py-1.5 rounded-lg border text-[10px] font-bold transition-colors">{{ opt[1] }}</button>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+
             </div>
-          } @else if (!showThemePanel() && !showPublicViewPanel()) {
+          } @else if (!showThemePanel() && !showPublicViewPanel() && !showHeaderPanel() && !showFooterPanel()) {
             <div class="flex flex-col items-center justify-center h-full text-slate-400 p-8 text-center">
               <i class="pi pi-sliders-h text-4xl mb-4 text-slate-200"></i>
               <p class="font-bold text-slate-500 mb-1">Nessun blocco selezionato</p>
@@ -1034,10 +1370,16 @@ export class SiteBuilderComponent {
   readonly deleteConfirmId = signal<string | null>(null);
   readonly showThemePanel     = signal(false);
   readonly showPublicViewPanel = signal(false);
+  readonly showHeaderPanel    = signal(false);
+  readonly showFooterPanel    = signal(false);
   readonly showPicker         = signal(false);
   readonly ctxMenu            = signal<CtxMenu | null>(null);
   readonly publicViewConfig   = signal(this.mockData.getPublicViewConfig(this.studioSlug));
   readonly publicViewSaved    = signal(false);
+  readonly headerConfig       = signal<SiteHeaderConfig>(this.mockData.getHeaderConfig(this.studioSlug));
+  readonly headerSaved        = signal(false);
+  readonly footerConfig       = signal<SiteFooterConfig>(this.mockData.getFooterConfig(this.studioSlug));
+  readonly footerSaved        = signal(false);
 
   readonly selectedBlock = computed(() => {
     const id = this.selectedBlockId();
@@ -1076,8 +1418,9 @@ export class SiteBuilderComponent {
       label: 'Layout',
       icon: 'pi pi-th-large',
       items: [
-        { type: 'divider', label: 'Divisore',     desc: 'Linea di separazione',      icon: 'pi pi-minus' },
-        { type: 'spacer',  label: 'Spazio Vuoto', desc: 'Distanza configurabile',    icon: 'pi pi-arrows-v' },
+        { type: 'columns', label: 'Affiancamento', desc: 'Immagine + testo affiancati', icon: 'pi pi-table' },
+        { type: 'divider', label: 'Divisore',       desc: 'Linea di separazione',       icon: 'pi pi-minus' },
+        { type: 'spacer',  label: 'Spazio Vuoto',   desc: 'Distanza configurabile',     icon: 'pi pi-arrows-v' },
       ]
     },
   ];
@@ -1216,6 +1559,7 @@ export class SiteBuilderComponent {
       case 'spacer':       config = { height: 32 }; break;
       case 'divider':      config = { style: 'solid', color: '#e2e8f0', thickness: 1 }; break;
       case 'hero':         config = { title: 'Benvenuti nel nostro Studio', subtitle: 'Prenota la tua visita o entra in coda digitale in pochi secondi.', imageUrl: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1200&q=80', overlayOpacity: 0.5, minHeight: 380, textAlign: 'center' }; break;
+      case 'columns':      config = { layout: 'image-left', imageUrl: '', imageAlt: 'Immagine', content: '<h3>Titolo colonna</h3><p>Descrizione del contenuto affiancato all\'immagine. Puoi modificare questo testo con l\'HTML che preferisci.</p>', imageRounded: 'lg', verticalAlign: 'center', imageWidthPercent: 50 }; break;
     }
     const newBlock: SiteBlock = { id: newId, type, order: this.blocks().length, config, paddingY: 'md' };
     this.blocks.update(b => [...b, newBlock]);
@@ -1349,11 +1693,81 @@ export class SiteBuilderComponent {
     return blocks.map((b, i) => ({ ...b, order: i }));
   }
 
+  // ── Header / Footer panel ───────────────────────────────────────────────
+
+  toggleHeaderPanel(event: Event): void {
+    event.stopPropagation();
+    this.showHeaderPanel.update(v => !v);
+    this.showFooterPanel.set(false);
+    this.showThemePanel.set(false);
+    this.showPublicViewPanel.set(false);
+    this.selectedBlockId.set(null);
+    this.showPicker.set(false);
+  }
+
+  toggleFooterPanel(event: Event): void {
+    event.stopPropagation();
+    this.showFooterPanel.update(v => !v);
+    this.showHeaderPanel.set(false);
+    this.showThemePanel.set(false);
+    this.showPublicViewPanel.set(false);
+    this.selectedBlockId.set(null);
+    this.showPicker.set(false);
+  }
+
+  updateHeaderField(field: keyof SiteHeaderConfig, value: any): void {
+    this.headerConfig.set({ ...this.headerConfig(), [field]: value });
+  }
+
+  addMenuItem(): void {
+    const items = [...(this.headerConfig().menuItems ?? [])];
+    items.push({ label: 'Nuova voce', href: '#' });
+    this.headerConfig.set({ ...this.headerConfig(), menuItems: items });
+  }
+
+  removeMenuItem(i: number): void {
+    const items = [...(this.headerConfig().menuItems ?? [])];
+    items.splice(i, 1);
+    this.headerConfig.set({ ...this.headerConfig(), menuItems: items });
+  }
+
+  updateMenuItem(i: number, field: keyof SiteMenuItemConfig, value: string): void {
+    const items = [...(this.headerConfig().menuItems ?? [])];
+    items[i] = { ...items[i], [field]: value };
+    this.headerConfig.set({ ...this.headerConfig(), menuItems: items });
+  }
+
+  saveHeaderConfig(): void {
+    this.mockData.saveHeaderConfig(this.studioSlug, this.headerConfig());
+    this.headerSaved.set(true);
+    setTimeout(() => this.headerSaved.set(false), 3000);
+  }
+
+  updateFooterField(field: keyof SiteFooterConfig, value: any): void {
+    this.footerConfig.set({ ...this.footerConfig(), [field]: value });
+  }
+
+  saveFooterConfig(): void {
+    this.mockData.saveFooterConfig(this.studioSlug, this.footerConfig());
+    this.footerSaved.set(true);
+    setTimeout(() => this.footerSaved.set(false), 3000);
+  }
+
+  resetToAndromedaDemo(): void {
+    if (!confirm('Resettare la pagina ai contenuti demo Andromeda? Questo sovrascriverà i blocchi e le configurazioni attuali.')) return;
+    this.mockData.resetToAndromedaDemo(this.studioSlug);
+    this.loadPage();
+    this.headerConfig.set(this.mockData.getHeaderConfig(this.studioSlug));
+    this.footerConfig.set(this.mockData.getFooterConfig(this.studioSlug));
+    this.toastVisible.set(true);
+    setTimeout(() => this.toastVisible.set(false), 3000);
+  }
+
   getBlockIcon(type: SiteBlockType): string {
-    return ({ text: 'pi pi-align-left', image: 'pi pi-camera', gallery: 'pi pi-images', video: 'pi pi-video', map: 'pi pi-map-marker', 'phone-button': 'pi pi-phone', spacer: 'pi pi-arrows-v', hero: 'pi pi-image', divider: 'pi pi-minus' })[type] || 'pi pi-box';
+    return ({ text: 'pi pi-align-left', image: 'pi pi-camera', gallery: 'pi pi-images', video: 'pi pi-video', map: 'pi pi-map-marker', 'phone-button': 'pi pi-phone', spacer: 'pi pi-arrows-v', hero: 'pi pi-image', divider: 'pi pi-minus', columns: 'pi pi-table' })[type] || 'pi pi-box';
   }
 
   getBlockLabel(type: SiteBlockType): string {
-    return ({ text: 'Testo', image: 'Immagine', gallery: 'Galleria', video: 'Video', map: 'Mappa', 'phone-button': 'Telefono', spacer: 'Spazio', hero: 'Hero', divider: 'Divisore' })[type] || 'Blocco';
+    return ({ text: 'Testo', image: 'Immagine', gallery: 'Galleria', video: 'Video', map: 'Mappa', 'phone-button': 'Telefono', spacer: 'Spazio', hero: 'Hero', divider: 'Divisore', columns: 'Affiancamento' })[type] || 'Blocco';
   }
 }

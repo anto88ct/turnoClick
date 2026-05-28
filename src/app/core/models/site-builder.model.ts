@@ -1,4 +1,4 @@
-export type SiteBlockType = 'text' | 'image' | 'video' | 'map' | 'phone-button' | 'spacer' | 'hero' | 'gallery' | 'divider';
+export type SiteBlockType = 'text' | 'image' | 'video' | 'map' | 'phone-button' | 'spacer' | 'hero' | 'gallery' | 'divider' | 'columns';
 
 export interface BaseBlockConfig {
   [key: string]: any;
@@ -66,6 +66,17 @@ export interface DividerBlockConfig extends BaseBlockConfig {
   thickness: number;
 }
 
+/** Layout a due colonne: immagine affiancata a testo formattato */
+export interface ColumnsBlockConfig extends BaseBlockConfig {
+  layout: 'image-left' | 'image-right';
+  imageUrl: string;
+  imageAlt: string;
+  content: string;
+  imageRounded: 'none' | 'md' | 'lg' | 'full';
+  verticalAlign: 'top' | 'center';
+  imageWidthPercent: 40 | 50 | 60;
+}
+
 export type BlockConfig =
   | TextBlockConfig
   | ImageBlockConfig
@@ -75,7 +86,8 @@ export type BlockConfig =
   | PhoneButtonConfig
   | SpacerBlockConfig
   | HeroBlockConfig
-  | DividerBlockConfig;
+  | DividerBlockConfig
+  | ColumnsBlockConfig;
 
 export interface SiteBlock {
   id: string;
@@ -87,11 +99,32 @@ export interface SiteBlock {
   disabled?: boolean;
 }
 
+export interface SiteMenuItemConfig {
+  label: string;
+  href: string;
+}
+
 export interface SiteHeaderConfig {
   logoText?: string;
+  logoUrl?: string;
   bgColor?: string;
   textColor?: string;
   showQueuePill?: boolean;
+  menuItems?: SiteMenuItemConfig[];
+  ctaLabel?: string;
+  ctaLink?: string;
+}
+
+export interface SiteFooterConfig {
+  address?: string;
+  email?: string;
+  phone?: string;
+  vatNumber?: string;
+  hours?: string;
+  instagramUrl?: string;
+  facebookUrl?: string;
+  bgColor?: string;
+  textColor?: string;
 }
 
 export interface SitePageConfig {
@@ -105,16 +138,10 @@ export interface SitePageConfig {
 
 /** Controls what patients can see/do on the public landing page */
 export interface PublicViewConfig {
-  /** Show live queue status widget (in-attesa count, wait time) */
   showQueueStatus: boolean;
-  /** Allow patients to join the queue from the site */
   allowJoinQueue: boolean;
-  /** Allow patients to book appointments from the site (requires login/register) */
   allowBookAppointment: boolean;
-  /** Show book-appointment CTA even when not logged in (redirects to login) */
   showBookingCTAPublic: boolean;
-  /** Show doctors list section */
   showDoctors: boolean;
-  /** Custom booking button label */
   bookingLabel: string;
 }

@@ -11,7 +11,8 @@ import {
   PhoneButtonConfig,
   SpacerBlockConfig,
   HeroBlockConfig,
-  DividerBlockConfig
+  DividerBlockConfig,
+  ColumnsBlockConfig
 } from '../../core/models/site-builder.model';
 
 @Component({
@@ -148,26 +149,25 @@ import {
         }
 
         @case ('hero') {
-          <div class="relative w-full overflow-hidden flex items-center justify-center text-center"
+          <div class="relative w-full overflow-hidden flex items-center justify-center"
                [ngStyle]="{
                  'min-height.px': heroConfig.minHeight || 320,
                  'text-align': heroConfig.textAlign || 'center'
-               }"
-               class="rounded-2xl shadow-md">
+               }">
             @if (heroConfig.imageUrl) {
               <img [src]="heroConfig.imageUrl" class="absolute inset-0 w-full h-full object-cover" alt="" />
             }
             <div class="absolute inset-0 bg-slate-900" [ngStyle]="{'opacity': heroConfig.overlayOpacity}"></div>
-            <div class="relative z-10 max-w-2xl mx-auto flex flex-col items-center px-6 py-10">
+            <div class="relative z-10 max-w-2xl mx-auto flex flex-col items-center px-6 py-12">
               @if (heroConfig.title) {
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-4 drop-shadow-md"
+                <h2 class="text-3xl sm:text-5xl font-extrabold text-white mb-4 drop-shadow-md leading-tight"
                     style="text-wrap: balance">
                   {{ heroConfig.title }}
                 </h2>
               }
               @if (heroConfig.subtitle) {
-                <p class="text-base sm:text-lg text-white/90 mb-8 font-medium drop-shadow"
-                   style="text-wrap: pretty">
+                <p class="text-base sm:text-lg text-white/85 mb-8 font-medium drop-shadow"
+                   style="text-wrap: pretty; white-space: pre-line">
                   {{ heroConfig.subtitle }}
                 </p>
               }
@@ -177,6 +177,38 @@ import {
                   {{ heroConfig.buttonLabel }}
                 </a>
               }
+            </div>
+          </div>
+        }
+
+        @case ('columns') {
+          <div class="flex gap-6 sm:gap-10"
+               [class]="columnsConfig.layout === 'image-right' ? 'flex-col sm:flex-row-reverse' : 'flex-col sm:flex-row'"
+               [ngStyle]="{'align-items': columnsConfig.verticalAlign === 'center' ? 'center' : 'flex-start'}">
+
+            <!-- Image side -->
+            <div class="flex-shrink-0 w-full"
+                 [ngStyle]="{'flex-basis': columnsConfig.imageWidthPercent + '%'}">
+              @if (columnsConfig.imageUrl) {
+                <img [src]="columnsConfig.imageUrl"
+                     [alt]="columnsConfig.imageAlt"
+                     class="w-full h-auto object-cover shadow-md"
+                     [ngClass]="getBorderRadiusClass(columnsConfig.imageRounded)" />
+              } @else {
+                <div class="w-full aspect-video bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">
+                  <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+              }
+            </div>
+
+            <!-- Text side -->
+            <div class="flex-1 min-w-0">
+              <div [innerHTML]="safeHtml(columnsConfig.content)"
+                   class="prose max-w-none"
+                   style="line-height: 1.75">
+              </div>
             </div>
           </div>
         }
@@ -199,6 +231,7 @@ export class SiteBlockRendererComponent {
   get spacerConfig(): SpacerBlockConfig { return this.block.config as SpacerBlockConfig; }
   get heroConfig(): HeroBlockConfig { return this.block.config as HeroBlockConfig; }
   get dividerConfig(): DividerBlockConfig { return this.block.config as DividerBlockConfig; }
+  get columnsConfig(): ColumnsBlockConfig { return this.block.config as ColumnsBlockConfig; }
 
   wrapperStyle(): Record<string, string> {
     const styles: Record<string, string> = {};

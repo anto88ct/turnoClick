@@ -3,7 +3,7 @@ import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MockDataService } from '../../core/services/mock-data.service';
 import { SiteBlockRendererComponent } from '../../shared/site-block-renderer/site-block-renderer.component';
-import { SiteBlock } from '../../core/models/site-builder.model';
+import { SiteBlock, SiteHeaderConfig, SiteFooterConfig } from '../../core/models/site-builder.model';
 import { TcBigButtonComponent } from '../../shared/tc-big-button/tc-big-button.component';
 import { PatientAuthService } from '../auth/patient-auth.service';
 
@@ -151,81 +151,91 @@ type AuthModal = 'login' | 'register' | null;
         </div>
       }
 
-      <header class="sticky top-9 z-40 bg-white border-b border-slate-200 shadow-sm relative">
-        <div class="flex items-center justify-between px-4 py-3 max-w-4xl mx-auto w-full">
+      <!-- ─────────────── DYNAMIC HEADER ─────────────────────── -->
+      <header class="sticky top-0 z-40 border-b shadow-sm"
+              [style.background-color]="header().bgColor || '#ffffff'"
+              [style.border-color]="'rgba(0,0,0,0.08)'">
+        <div class="flex items-center justify-between px-4 py-3 max-w-5xl mx-auto w-full gap-3">
 
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow-tc flex-shrink-0"
-                 style="background-color: var(--brand)">
-              <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-            </div>
-            <div class="min-w-0">
-              <h1 class="text-sm sm:text-base font-extrabold text-slate-900 truncate">{{ studioName }}</h1>
-              <p class="text-xs text-slate-400 font-medium hidden sm:block">Sala d'attesa digitale</p>
-            </div>
+          <!-- Logo / brand -->
+          <div class="flex items-center gap-2.5 min-w-0 flex-shrink-0">
+            @if (header().logoUrl) {
+              <img [src]="header().logoUrl" alt="Logo" class="h-9 w-auto object-contain max-w-[140px]">
+            } @else {
+              <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0 text-white font-extrabold text-base"
+                   style="background-color: var(--brand)">
+                {{ (header().logoText || 'S').charAt(0).toUpperCase() }}
+              </div>
+            }
+            <span class="text-sm sm:text-base font-extrabold truncate"
+                  [style.color]="header().textColor || '#1e293b'">
+              {{ header().logoText || studioName }}
+            </span>
           </div>
 
+          <!-- Desktop nav menu -->
+          @if ((header().menuItems ?? []).length > 0) {
+            <nav class="hidden md:flex items-center gap-1">
+              @for (item of header().menuItems ?? []; track item.href) {
+                <a [href]="item.href"
+                   class="px-3 py-1.5 rounded-full text-sm font-semibold transition-colors hover:bg-black/5 no-underline"
+                   [style.color]="header().textColor || '#1e293b'">
+                  {{ item.label }}
+                </a>
+              }
+            </nav>
+          }
+
+          <!-- Right side -->
           <div class="flex items-center gap-2 flex-shrink-0">
 
-            <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-full
-                        border border-slate-200 flex-shrink-0 text-xs font-semibold text-slate-600">
-              <div class="w-1.5 h-1.5 rounded-full animate-pulse"
-                   [class]="queueEnabled() ? 'bg-amber-400' : 'bg-slate-300'"></div>
-              {{ waitingCount() }} in attesa
-            </div>
-
-            <div class="hidden sm:flex items-center gap-1.5">
-              @if (currentUser()) {
-                <a [routerLink]="['/p', slug, 'area-personale']"
-                   class="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold no-underline transition-colors flex-shrink-0"
-                   style="border-color: var(--brand); color: var(--brand)">
-                  <div class="w-5 h-5 rounded-full text-white text-[10px] font-extrabold flex items-center justify-center flex-shrink-0"
-                       style="background-color: var(--brand)">
-                    {{ currentUser()!.name.charAt(0).toUpperCase() }}
-                  </div>
-                  <span>{{ currentUser()!.name.split(' ')[0] }}</span>
-                </a>
-              } @else {
-                <button (click)="openModal('login')"
-                        class="px-3 py-1.5 rounded-full border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
-                  Login
-                </button>
-                <button (click)="openModal('register')"
-                        class="px-3 py-1.5 rounded-full text-xs font-bold text-white transition-opacity hover:opacity-90"
-                        style="background-color: var(--brand)">
-                  Registrati
-                </button>
-              }
-            </div>
-
-            @if (queueEnabled()) {
-              <a [routerLink]="['/p', slug, 'coda']"
-                 class="flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 py-2 text-white
-                        text-xs sm:text-sm font-bold rounded-full shadow-tc hover:opacity-90
-                        transition-all hover:scale-105 no-underline"
-                 style="background-color: var(--brand)">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                </svg>
-                <span class="hidden sm:inline">Prendi numero</span>
-                <span class="sm:hidden">Numero</span>
-              </a>
-            } @else {
-              <div class="flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-slate-100
-                          text-slate-400 text-xs sm:text-sm font-bold rounded-full cursor-not-allowed">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 115.636 5.636m12.728 12.728L5.636 5.636"/>
-                </svg>
-                <span class="hidden sm:inline">Coda chiusa</span>
-                <span class="sm:hidden">Chiusa</span>
+            <!-- Queue pill -->
+            @if (header().showQueuePill !== false) {
+              <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-black/5 rounded-full
+                          text-xs font-semibold"
+                   [style.color]="header().textColor || '#1e293b'">
+                <div class="w-1.5 h-1.5 rounded-full animate-pulse"
+                     [class]="queueEnabled() ? 'bg-amber-400' : 'bg-slate-400'"></div>
+                {{ waitingCount() }} in attesa
               </div>
             }
 
+            <!-- Auth buttons (desktop) -->
+            <div class="hidden sm:flex items-center gap-1.5">
+              @if (currentUser()) {
+                <a [routerLink]="['/p', slug, 'area-personale']"
+                   class="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold no-underline transition-colors"
+                   style="border-color: var(--brand); color: var(--brand)">
+                  <div class="w-5 h-5 rounded-full text-white text-[10px] font-extrabold flex items-center justify-center"
+                       style="background-color: var(--brand)">
+                    {{ currentUser()!.name.charAt(0).toUpperCase() }}
+                  </div>
+                  {{ currentUser()!.name.split(' ')[0] }}
+                </a>
+              } @else {
+                <button (click)="openModal('login')"
+                        class="px-3 py-1.5 rounded-full border border-slate-200 text-xs font-bold transition-colors"
+                        [style.color]="header().textColor || '#64748b'">Accedi</button>
+                <button (click)="openModal('register')"
+                        class="px-3 py-1.5 rounded-full text-xs font-bold text-white transition-opacity hover:opacity-90"
+                        style="background-color: var(--brand)">Registrati</button>
+              }
+            </div>
+
+            <!-- CTA button -->
+            @if (header().ctaLabel) {
+              <a [href]="header().ctaLink || '#prenota'"
+                 class="flex-shrink-0 px-4 py-2 rounded-full text-xs sm:text-sm font-bold text-white
+                        shadow-sm hover:opacity-90 transition-all no-underline"
+                 style="background-color: var(--brand)">
+                {{ header().ctaLabel }}
+              </a>
+            }
+
+            <!-- Mobile hamburger -->
             <button (click)="mobileMenuOpen.set(!mobileMenuOpen())"
-                    class="sm:hidden p-1.5 -mr-1 text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                    class="md:hidden p-1.5 rounded-full transition-colors hover:bg-black/5"
+                    [style.color]="header().textColor || '#64748b'">
               <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 @if (mobileMenuOpen()) {
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -234,42 +244,45 @@ type AuthModal = 'login' | 'register' | null;
                 }
               </svg>
             </button>
-
           </div>
         </div>
 
+        <!-- Mobile menu drawer -->
         @if (mobileMenuOpen()) {
-          <div class="sm:hidden absolute top-full left-0 w-full bg-white border-b border-slate-200 shadow-xl animate-fade-in z-50">
-            <div class="px-4 py-4 flex flex-col gap-3">
+          <div class="md:hidden border-t border-black/10 animate-fade-in"
+               [style.background-color]="header().bgColor || '#ffffff'">
+            <div class="px-4 py-4 flex flex-col gap-3 max-w-5xl mx-auto">
 
-              <div class="flex items-center gap-1.5 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 w-full justify-center">
+              @for (item of header().menuItems ?? []; track item.href) {
+                <a [href]="item.href" (click)="mobileMenuOpen.set(false)"
+                   class="py-2 font-semibold text-sm no-underline"
+                   [style.color]="header().textColor || '#1e293b'">
+                  {{ item.label }}
+                </a>
+              }
+
+              <div class="flex items-center gap-1.5 py-2 text-xs font-semibold"
+                   [style.color]="header().textColor || '#64748b'">
                 <div class="w-1.5 h-1.5 rounded-full animate-pulse"
-                     [class]="queueEnabled() ? 'bg-amber-400' : 'bg-slate-300'"></div>
+                     [class]="queueEnabled() ? 'bg-amber-400' : 'bg-slate-400'"></div>
                 {{ waitingCount() }} persone in attesa
               </div>
 
               @if (currentUser()) {
                 <a [routerLink]="['/p', slug, 'area-personale']"
                    (click)="mobileMenuOpen.set(false)"
-                   class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl border font-bold no-underline transition-colors"
+                   class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl border font-bold no-underline"
                    style="border-color: var(--brand); color: var(--brand)">
-                  <div class="w-6 h-6 rounded-full text-white text-[10px] font-extrabold flex items-center justify-center"
-                       style="background-color: var(--brand)">
-                    {{ currentUser()!.name.charAt(0).toUpperCase() }}
-                  </div>
-                  <span>Area Personale ({{ currentUser()!.name.split(' ')[0] }})</span>
+                  Area Personale ({{ currentUser()!.name.split(' ')[0] }})
                 </a>
               } @else {
                 <div class="grid grid-cols-2 gap-2">
                   <button (click)="openModal('login'); mobileMenuOpen.set(false)"
-                          class="px-4 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition-colors">
-                    Accedi
-                  </button>
+                          class="px-4 py-3 rounded-xl border border-slate-200 font-bold transition-colors"
+                          [style.color]="header().textColor || '#64748b'">Accedi</button>
                   <button (click)="openModal('register'); mobileMenuOpen.set(false)"
-                          class="px-4 py-3 rounded-xl font-bold text-white transition-opacity hover:opacity-90"
-                          style="background-color: var(--brand)">
-                    Registrati
-                  </button>
+                          class="px-4 py-3 rounded-xl font-bold text-white hover:opacity-90"
+                          style="background-color: var(--brand)">Registrati</button>
                 </div>
               }
             </div>
@@ -399,19 +412,105 @@ type AuthModal = 'login' | 'register' | null;
         </div>
       </section>
 
-      <footer class="flex-shrink-0 bg-slate-900 py-6 px-5">
-        <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p class="text-xs text-white/40 font-medium text-center sm:text-left">
-            Powered by <span class="font-extrabold" style="color: var(--brand)">TurnoClick</span> — turnoclick.it
-          </p>
-          <a [routerLink]="['/p', slug, 'totem']"
-             class="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors no-underline font-medium">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="3" width="20" height="14" rx="2"/>
-              <path stroke-linecap="round" stroke-linejoin="round" d="M8 21h8M12 17v4"/>
-            </svg>
-            Vista TOTEM sala d'attesa
-          </a>
+      <!-- ─────────────── INSTITUTIONAL FOOTER ──────────────── -->
+      <footer class="flex-shrink-0"
+              [style.background-color]="footer().bgColor || '#0f172a'"
+              [style.color]="footer().textColor || '#f1f5f9'">
+
+        <!-- Main footer content -->
+        <div class="max-w-5xl mx-auto px-5 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+
+          <!-- Studio brand + address -->
+          <div>
+            <p class="font-extrabold text-base mb-1 opacity-90">{{ header().logoText || studioName }}</p>
+            @if (footer().address) {
+              <p class="text-xs opacity-60 leading-relaxed mt-2">
+                <svg class="w-3 h-3 inline-block mr-1 -mt-0.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                {{ footer().address }}
+              </p>
+            }
+            @if (footer().vatNumber) {
+              <p class="text-[11px] opacity-50 mt-1">P.IVA {{ footer().vatNumber }}</p>
+            }
+            <!-- Social links -->
+            @if (footer().instagramUrl || footer().facebookUrl) {
+              <div class="flex gap-3 mt-4">
+                @if (footer().instagramUrl) {
+                  <a [href]="footer().instagramUrl" target="_blank" rel="noopener"
+                     class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors no-underline opacity-80 hover:opacity-100">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                    </svg>
+                  </a>
+                }
+                @if (footer().facebookUrl) {
+                  <a [href]="footer().facebookUrl" target="_blank" rel="noopener"
+                     class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors no-underline opacity-80 hover:opacity-100">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                  </a>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Contacts -->
+          <div>
+            <p class="font-extrabold text-xs uppercase tracking-wider opacity-50 mb-3">Contatti</p>
+            <div class="space-y-2">
+              @if (footer().email) {
+                <a [href]="'mailto:' + footer().email"
+                   class="flex items-center gap-2 text-xs opacity-70 hover:opacity-100 transition-opacity no-underline"
+                   [style.color]="footer().textColor || '#f1f5f9'">
+                  <svg class="w-3.5 h-3.5 flex-shrink-0 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                  </svg>
+                  {{ footer().email }}
+                </a>
+              }
+              @if (footer().phone) {
+                <a [href]="'tel:' + footer().phone"
+                   class="flex items-center gap-2 text-xs opacity-70 hover:opacity-100 transition-opacity no-underline"
+                   [style.color]="footer().textColor || '#f1f5f9'">
+                  <svg class="w-3.5 h-3.5 flex-shrink-0 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                  </svg>
+                  {{ footer().phone }}
+                </a>
+              }
+            </div>
+          </div>
+
+          <!-- Hours -->
+          @if (footer().hours) {
+            <div>
+              <p class="font-extrabold text-xs uppercase tracking-wider opacity-50 mb-3">Orari</p>
+              <p class="text-xs opacity-70 leading-relaxed whitespace-pre-line">{{ footer().hours }}</p>
+            </div>
+          }
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="border-t border-white/10">
+          <div class="max-w-5xl mx-auto px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p class="text-xs opacity-40 font-medium">
+              Powered by <span class="font-extrabold opacity-70" style="color: var(--brand)">TurnoClick</span>
+              <span class="opacity-40"> · turnoclick.it</span>
+            </p>
+            <a [routerLink]="['/p', slug, 'totem']"
+               class="flex items-center gap-1.5 text-xs opacity-40 hover:opacity-70 transition-opacity no-underline font-medium"
+               [style.color]="footer().textColor || '#f1f5f9'">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 21h8M12 17v4"/>
+              </svg>
+              Vista TOTEM sala d'attesa
+            </a>
+          </div>
         </div>
       </footer>
 
@@ -428,7 +527,16 @@ export class PatientLandingComponent {
     return this.route.snapshot.paramMap.get('slug') ?? 'studio-demo';
   }
 
-  get studioName(): string { return 'Studio Medico Dott. Rossi'; }
+  get studioName(): string {
+    const h = this.mockData.getHeaderConfig(this.slug);
+    return h.logoText || 'Studio Medico';
+  }
+
+  // Initialized once at load — patched when admin saves (needs reload)
+  private readonly _header = signal<SiteHeaderConfig>(this.mockData.getHeaderConfig(this.slug));
+  private readonly _footer = signal<SiteFooterConfig>(this.mockData.getFooterConfig(this.slug));
+  readonly header = this._header.asReadonly();
+  readonly footer = this._footer.asReadonly();
 
   readonly currentUser = this.authService.currentUser;
 

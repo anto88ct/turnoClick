@@ -5,7 +5,7 @@ import { Studio } from '../models/studio.model';
 import { DailyStats, GlobalStats, HourlyData } from '../models/stats.model';
 import { PlanType } from '../models/plan.model';
 import { Client, Visit, Attachment, PaymentMethod } from '../models/client.model';
-import { SitePageConfig, SiteBlock, PublicViewConfig } from '../models/site-builder.model';
+import { SitePageConfig, SiteBlock, PublicViewConfig, SiteHeaderConfig, SiteFooterConfig } from '../models/site-builder.model';
 import { DoctorMessage, DoctorStatus, DoctorAvailability, DoctorStatusType } from '../models/doctor-hub.model';
 
 const NAMES = [
@@ -36,6 +36,7 @@ const INITIAL_DOCTORS: Doctor[] = [
     reviewCount: 214,
     available: true,
     studioId: 'studio-demo',
+    room: 'Stanza 1',
   },
   {
     id: 'dr-bianchi',
@@ -48,6 +49,7 @@ const INITIAL_DOCTORS: Doctor[] = [
     reviewCount: 97,
     available: true,
     studioId: 'studio-demo',
+    room: 'Stanza 2',
   },
   {
     id: 'dr-ferrari',
@@ -60,6 +62,7 @@ const INITIAL_DOCTORS: Doctor[] = [
     reviewCount: 156,
     available: true,
     studioId: 'studio-demo',
+    room: 'Stanza 3',
   },
   {
     id: 'dr-romano',
@@ -72,6 +75,7 @@ const INITIAL_DOCTORS: Doctor[] = [
     reviewCount: 88,
     available: false,
     studioId: 'studio-demo',
+    room: 'Stanza 4',
   },
   {
     id: 'dr-esposito',
@@ -84,6 +88,7 @@ const INITIAL_DOCTORS: Doctor[] = [
     reviewCount: 203,
     available: true,
     studioId: 'studio-demo',
+    room: 'Stanza 5',
   },
 ];
 
@@ -351,8 +356,8 @@ const HOURLY_DATA: HourlyData[] = [
 
 const DEFAULT_SITE_PAGE: SitePageConfig = {
   theme: {
-    primaryColor: '#6366f1',
-    fontFamily: 'Inter, sans-serif',
+    primaryColor: '#1e3a5f',
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
     pageBackgroundColor: '#ffffff'
   },
   blocks: [
@@ -362,45 +367,132 @@ const DEFAULT_SITE_PAGE: SitePageConfig = {
       order: 0,
       paddingY: 'none',
       config: {
-        title: 'Benvenuti allo Studio Medico',
-        subtitle: 'Prenota la tua visita online in pochi clic o mettiti in coda comodamente da casa.',
-        imageUrl: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1200&q=80',
-        overlayOpacity: 0.6,
-        minHeight: 380,
+        title: 'Studio Medico Andromeda',
+        subtitle: 'Chirurgia Plastica · Medicina Estetica · Acireale (CT)\nPrenota la tua consulenza o mettiti in coda digitale in pochi secondi.',
+        imageUrl: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1400&q=85',
+        overlayOpacity: 0.62,
+        minHeight: 480,
         textAlign: 'center',
-        buttonLabel: 'Prenota Ora',
+        buttonLabel: 'Prenota Consulenza',
         buttonLink: '#prenota'
       } as any
     },
     {
-      id: 'block-text-1',
+      id: 'block-intro-text',
       type: 'text',
       order: 1,
-      paddingY: 'md',
+      paddingY: 'lg',
       config: {
-        content: '<p>Il nostro studio offre servizi medici di alta qualità dal 2005. Siamo un team di professionisti dedicati alla tua salute e al tuo benessere.</p>',
+        content: '<h2 style="font-size:1.5rem;font-weight:800;color:#1e3a5f;margin-bottom:0.75rem;text-align:center">La tua bellezza, la nostra missione</h2><p style="text-align:center;max-width:640px;margin:0 auto;color:#475569;line-height:1.8">Lo Studio Medico Andromeda è un centro di eccellenza ad Acireale specializzato in chirurgia plastica ed estetica. Il nostro team di chirurghi certificati garantisce risultati naturali con le tecnologie più avanzate, in un ambiente accogliente e sicuro.</p>',
         align: 'center',
         fontSize: 'normal',
         color: '#475569'
       } as any
     },
     {
-      id: 'block-spacer-1',
-      type: 'spacer',
+      id: 'block-divider-1',
+      type: 'divider',
       order: 2,
       paddingY: 'none',
+      config: { style: 'solid', color: '#e2e8f0', thickness: 1 } as any
+    },
+    {
+      id: 'block-team-title',
+      type: 'text',
+      order: 3,
+      paddingY: 'md',
       config: {
-        height: 16
+        content: '<h2 style="font-size:1.4rem;font-weight:800;color:#1e3a5f;letter-spacing:-0.02em">Il Nostro Team</h2><p style="color:#64748b;margin-top:0.25rem">Specialisti con anni di esperienza in chirurgia plastica ed estetica</p>',
+        align: 'left',
+        fontSize: 'normal',
+        color: '#1e293b'
+      } as any
+    },
+    {
+      id: 'block-doc-pompili',
+      type: 'columns',
+      order: 4,
+      paddingY: 'md',
+      config: {
+        layout: 'image-left',
+        imageUrl: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=600&q=80',
+        imageAlt: 'Dott. Gianluca Pompili',
+        content: '<h3 style="font-size:1.2rem;font-weight:800;color:#1e3a5f;margin-bottom:0.25rem">Dott. Gianluca Pompili</h3><p style="color:#6366f1;font-weight:700;font-size:0.875rem;margin-bottom:0.75rem">Chirurgia Plastica ed Estetica</p><p style="color:#475569;line-height:1.75">Il Dott. Pompili è specialista in Chirurgia Plastica, Ricostruttiva ed Estetica con oltre 15 anni di esperienza clinica. Ha conseguito la specializzazione presso l\'Università di Catania ed è membro della SICPRE (Società Italiana di Chirurgia Plastica). È esperto in rinoplastica, blefaroplastica, lifting facciale e tecniche mini-invasive di medicina estetica.</p>',
+        imageRounded: 'lg',
+        verticalAlign: 'top',
+        imageWidthPercent: 40
+      } as any
+    },
+    {
+      id: 'block-doc-scilletta',
+      type: 'columns',
+      order: 5,
+      paddingY: 'md',
+      config: {
+        layout: 'image-right',
+        imageUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&q=80',
+        imageAlt: 'Dott.ssa Alessandra Scilletta',
+        content: '<h3 style="font-size:1.2rem;font-weight:800;color:#1e3a5f;margin-bottom:0.25rem">Dott.ssa Alessandra Scilletta</h3><p style="color:#6366f1;font-weight:700;font-size:0.875rem;margin-bottom:0.75rem">Chirurgia Plastica ed Estetica</p><p style="color:#475569;line-height:1.75">La Dott.ssa Scilletta si è specializzata in Chirurgia Plastica ed Estetica con una formazione d\'eccellenza presso centri universitari italiani ed europei. Esperta in trattamenti corporei avanzati, liposuzione, addominoplastica e tecniche di rigenerazione tissutale. Unisce precisione chirurgica e sensibilità estetica per risultati armoniosi e naturali.</p>',
+        imageRounded: 'lg',
+        verticalAlign: 'top',
+        imageWidthPercent: 40
+      } as any
+    },
+    {
+      id: 'block-divider-2',
+      type: 'divider',
+      order: 6,
+      paddingY: 'none',
+      config: { style: 'solid', color: '#e2e8f0', thickness: 1 } as any
+    },
+    {
+      id: 'block-treatments-title',
+      type: 'text',
+      order: 7,
+      paddingY: 'md',
+      config: {
+        content: '<h2 style="font-size:1.4rem;font-weight:800;color:#1e3a5f;letter-spacing:-0.02em">I Nostri Trattamenti</h2><p style="color:#64748b;margin-top:0.25rem">Tecnologie all\'avanguardia per il tuo benessere</p>',
+        align: 'left',
+        fontSize: 'normal',
+        color: '#1e293b'
+      } as any
+    },
+    {
+      id: 'block-treatments-cards',
+      type: 'text',
+      order: 8,
+      paddingY: 'sm',
+      config: {
+        content: `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.25rem;margin:0">
+  <div style="background:#f0f4ff;border-radius:1rem;padding:1.5rem;border:1px solid #c7d2fe">
+    <div style="font-size:2rem;margin-bottom:0.75rem">💉</div>
+    <h4 style="font-weight:800;color:#1e3a5f;font-size:1rem;margin-bottom:0.5rem">Carbossiterapia</h4>
+    <p style="color:#475569;font-size:0.875rem;line-height:1.65">Trattamento innovativo a base di CO₂ per contrastare cellulite, adiposità localizzata e migliorare la circolazione periferica.</p>
+  </div>
+  <div style="background:#f0fdf4;border-radius:1rem;padding:1.5rem;border:1px solid #bbf7d0">
+    <div style="font-size:2rem;margin-bottom:0.75rem">🔬</div>
+    <h4 style="font-weight:800;color:#1e3a5f;font-size:1rem;margin-bottom:0.5rem">Trattamento Alopecia</h4>
+    <p style="color:#475569;font-size:0.875rem;line-height:1.65">Protocolli personalizzati per la caduta dei capelli: PRP, mesoterapia e terapie farmacologiche integrate per risultati visibili e duraturi.</p>
+  </div>
+  <div style="background:#fff7ed;border-radius:1rem;padding:1.5rem;border:1px solid #fed7aa">
+    <div style="font-size:2rem;margin-bottom:0.75rem">⚡</div>
+    <h4 style="font-weight:800;color:#1e3a5f;font-size:1rem;margin-bottom:0.5rem">Macchinari Innovativi</h4>
+    <p style="color:#475569;font-size:0.875rem;line-height:1.65">Tecnologie di ultima generazione: laser frazionato, radiofrequenza, HIFU e dispositivi certificati CE per trattamenti non chirurgici d'eccellenza.</p>
+  </div>
+</div>`,
+        align: 'left',
+        fontSize: 'normal',
+        color: '#1e293b'
       } as any
     },
     {
       id: 'block-phone-1',
       type: 'phone-button',
-      order: 3,
+      order: 9,
       paddingY: 'md',
       config: {
-        phoneNumber: '+39021234567',
-        label: 'Chiama lo Studio',
+        phoneNumber: '+390957645321',
+        label: 'Chiama lo Studio Andromeda',
         color: 'primary',
         icon: true,
         size: 'md',
@@ -408,6 +500,34 @@ const DEFAULT_SITE_PAGE: SitePageConfig = {
       } as any
     }
   ]
+};
+
+const DEFAULT_HEADER_CONFIG: SiteHeaderConfig = {
+  logoText: 'Andromeda',
+  logoUrl: '',
+  bgColor: '#ffffff',
+  textColor: '#1e3a5f',
+  showQueuePill: true,
+  menuItems: [
+    { label: 'Chi Siamo', href: '#chi-siamo' },
+    { label: 'Team', href: '#team' },
+    { label: 'Trattamenti', href: '#trattamenti' },
+    { label: 'Contatti', href: '#prenota' },
+  ],
+  ctaLabel: 'Prenota Visita',
+  ctaLink: '#prenota',
+};
+
+const DEFAULT_FOOTER_CONFIG: SiteFooterConfig = {
+  address: 'Via Vittorio Emanuele 142, 95024 Acireale (CT)',
+  email: 'info@studioandromeda.it',
+  phone: '+39 095 764 5321',
+  vatNumber: 'IT04512780878',
+  hours: 'Lun–Ven 9:00–19:00 · Sab 9:00–13:00',
+  instagramUrl: 'https://instagram.com/studioandromeda',
+  facebookUrl: 'https://facebook.com/studioandromeda',
+  bgColor: '#0f172a',
+  textColor: '#f1f5f9',
 };
 
 const INITIAL_DOCTOR_MESSAGES: DoctorMessage[] = [
@@ -977,6 +1097,56 @@ export class MockDataService {
   savePublicViewConfig(slug: string, cfg: PublicViewConfig): void {
     this._publicViewConfig.update(m => ({ ...m, [slug]: { ...cfg } }));
     try { localStorage.setItem(`tc_pvc_${slug}`, JSON.stringify(cfg)); } catch {}
+  }
+
+  // ── Header / Footer Config ────────────────────────────────────────────────
+
+  private readonly _headerConfigs = signal<Record<string, SiteHeaderConfig>>({});
+  private readonly _footerConfigs = signal<Record<string, SiteFooterConfig>>({});
+
+  getHeaderConfig(slug: string): SiteHeaderConfig {
+    if (this._headerConfigs()[slug]) return this._headerConfigs()[slug];
+    try {
+      const raw = localStorage.getItem(`tc_header_${slug}`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as SiteHeaderConfig;
+        this._headerConfigs.update(m => ({ ...m, [slug]: parsed }));
+        return parsed;
+      }
+    } catch {}
+    return { ...DEFAULT_HEADER_CONFIG };
+  }
+
+  saveHeaderConfig(slug: string, cfg: SiteHeaderConfig): void {
+    this._headerConfigs.update(m => ({ ...m, [slug]: { ...cfg } }));
+    try { localStorage.setItem(`tc_header_${slug}`, JSON.stringify(cfg)); } catch {}
+  }
+
+  getFooterConfig(slug: string): SiteFooterConfig {
+    if (this._footerConfigs()[slug]) return this._footerConfigs()[slug];
+    try {
+      const raw = localStorage.getItem(`tc_footer_${slug}`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as SiteFooterConfig;
+        this._footerConfigs.update(m => ({ ...m, [slug]: parsed }));
+        return parsed;
+      }
+    } catch {}
+    return { ...DEFAULT_FOOTER_CONFIG };
+  }
+
+  saveFooterConfig(slug: string, cfg: SiteFooterConfig): void {
+    this._footerConfigs.update(m => ({ ...m, [slug]: { ...cfg } }));
+    try { localStorage.setItem(`tc_footer_${slug}`, JSON.stringify(cfg)); } catch {}
+  }
+
+  /** Resets a slug's pages + header + footer to the built-in Andromeda demo */
+  resetToAndromedaDemo(slug: string): void {
+    const freshPage: SitePageConfig = JSON.parse(JSON.stringify(DEFAULT_SITE_PAGE));
+    this._sitePages.update(p => ({ ...p, [slug]: freshPage }));
+    try { localStorage.setItem('tc_site_pages', JSON.stringify({ ...this._sitePages(), [slug]: freshPage })); } catch {}
+    this.saveHeaderConfig(slug, { ...DEFAULT_HEADER_CONFIG });
+    this.saveFooterConfig(slug, { ...DEFAULT_FOOTER_CONFIG });
   }
 
   // Doctor Hub Methods

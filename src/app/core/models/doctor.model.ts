@@ -9,6 +9,7 @@ export interface Doctor {
   reviewCount: number;
   available: boolean;
   studioId: string;
+  room?: string;
 }
 
 export interface DoctorTimeSlot {

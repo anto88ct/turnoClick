@@ -90,8 +90,6 @@ type AuthModal = 'login' | 'register' | null;
               @if (modal() === 'register') {
                 <div>
                   <div class="text-center mb-6">
-                    <div class="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center text-white text-2xl font-extrabold shadow-tc"
-                         style="background-color: var(--brand)">+</div>
                     <h2 class="text-2xl font-extrabold text-slate-900">Crea il tuo account</h2>
                     <p class="text-slate-500 mt-1">Prenota, gestisci documenti e molto altro</p>
                   </div>
@@ -343,40 +341,43 @@ type AuthModal = 'login' | 'register' | null;
           </div>
 
           <div class="space-y-3 animate-slide-in-up" style="animation-delay: 0.1s">
-            @if (queueEnabled()) {
-              <a [routerLink]="['/p', slug, 'coda']">
-                <tc-big-button variant="green">
-                  <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            <div class="space-y-5 flex flex-col w-full">
+              @if (queueEnabled()) {
+                <a [routerLink]="['/p', slug, 'coda']" class="w-full no-underline">
+                  <tc-big-button variant="green">
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span class="text-xl sm:text-2xl">PRENDI NUMERO</span>
+                  </tc-big-button>
+                </a>
+              } @else {
+                <div class="w-full py-5 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50
+                            flex items-center justify-center gap-3 text-slate-400">
+                  <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                   </svg>
-                  <span class="text-xl sm:text-2xl">PRENDI NUMERO</span>
+                  <span class="font-semibold text-sm">Coda non disponibile</span>
+                </div>
+              }
+
+              <a [routerLink]="['/p', slug, 'stato']" class="w-full no-underline">
+                <tc-big-button variant="outline">
+                  <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                  </svg>
+                  <span class="text-xl sm:text-2xl">STATO ATTESA</span>
                 </tc-big-button>
               </a>
-            } @else {
-              <div class="w-full py-5 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50
-                          flex items-center justify-center gap-3 text-slate-400">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                </svg>
-                <span class="font-semibold text-sm">Coda non disponibile</span>
-              </div>
-            }
 
-            <a [routerLink]="['/p', slug, 'stato']">
-              <tc-big-button variant="outline">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                </svg>
-                <span class="text-xl sm:text-2xl">STATO ATTESA</span>
-              </tc-big-button>
-            </a>
+            </div>
 
             @if (bookingEnabled()) {
               <a [routerLink]="['/p', slug, 'prenota']"
-                 class="flex items-center justify-center gap-2 py-4 font-bold text-base
-                        transition-colors no-underline"
-                 style="color: var(--brand)">
+                class="flex items-center justify-center gap-2 py-4 font-bold text-base
+                        transition-colors no-underline mt-4"
+                style="color: var(--brand)">
                 <svg class="w-5 h-5" style="color: var(--brand)" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                   <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
@@ -388,9 +389,9 @@ type AuthModal = 'login' | 'register' | null;
 
             @if (currentUser()) {
               <a [routerLink]="['/p', slug, 'area-personale']"
-                 class="flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm
+                class="flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm
                         transition-colors no-underline border"
-                 style="color: var(--brand); border-color: var(--brand)">
+                style="color: var(--brand); border-color: var(--brand)">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                 </svg>
@@ -399,16 +400,12 @@ type AuthModal = 'login' | 'register' | null;
             } @else {
               <button (click)="openModal('register')"
                       class="flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm
-                             transition-colors border w-full"
+                            transition-colors border w-full"
                       style="color: var(--brand); border-color: var(--brand)">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
-                </svg>
                 Registrati per gestire appuntamenti e documenti
               </button>
             }
           </div>
-
         </div>
       </section>
 

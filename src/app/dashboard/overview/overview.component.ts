@@ -11,7 +11,7 @@ import { BookingStatus } from '../../core/models/booking.model';
   standalone: true,
   imports: [RouterLink, TcStatCardComponent, TcQueueRowComponent, TcButtonComponent],
   template: `
-    <div class="p-5 max-w-screen-xl mx-auto">
+    <div class="p-4 sm:p-5 max-w-screen-xl mx-auto">
       <!-- Header -->
       <div class="mb-6">
         <h1 class="page-header">Panoramica giornaliera</h1>
@@ -19,7 +19,7 @@ import { BookingStatus } from '../../core/models/booking.model';
       </div>
 
       <!-- Stat cards -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <tc-stat-card label="In attesa" [value]="stats().inAttesa" sub="Paziente in coda" iconBg="bg-amber-50" valueColor="text-amber-600" [trend]="12">
           <svg icon class="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>

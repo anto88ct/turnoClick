@@ -96,29 +96,32 @@ import { DoctorMessage } from '../../core/models/doctor-hub.model';
 
           <!-- Composer -->
           <div class="px-5 py-4 bg-white border-t border-slate-100 flex-shrink-0">
-            <div class="flex gap-3 items-end">
+            <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 pl-4 pr-2 py-2 focus-within:border-tc-400 focus-within:ring-2 focus-within:ring-tc-100 transition-all duration-200">
+
               <textarea
                 [(ngModel)]="messageText"
                 (keydown.enter)="onEnterKey($any($event))"
                 placeholder="Scrivi un messaggio privato a {{ doctor.name }}..."
-                rows="2"
-                class="flex-1 resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800
-                       placeholder-slate-400 focus:border-tc-400 focus:ring-2 focus:ring-tc-100 focus:outline-none
-                       transition-all duration-200"
+                rows="1"
+                class="flex-1 resize-none bg-transparent py-1 text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
               ></textarea>
+
               <button
                 (click)="sendMessage()"
                 [disabled]="!messageText.trim()"
-                class="w-11 h-11 rounded-2xl bg-tc-500 hover:bg-tc-600 disabled:opacity-40 disabled:cursor-not-allowed
-                       flex items-center justify-center text-white transition-all duration-150 flex-shrink-0"
+                class="w-9 h-9 rounded-xl bg-tc-500 hover:bg-tc-600 disabled:opacity-40 disabled:cursor-not-allowed
+                      flex items-center justify-center text-white transition-all duration-150 flex-shrink-0"
               >
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                 </svg>
               </button>
+
             </div>
+
             <p class="text-xs text-slate-400 mt-2">Premi <kbd class="px-1 py-0.5 bg-slate-100 rounded text-slate-500 font-mono">Enter</kbd> per inviare, <kbd class="px-1 py-0.5 bg-slate-100 rounded text-slate-500 font-mono">Shift+Enter</kbd> per andare a capo</p>
           </div>
+
         } @else {
           <!-- Empty state -->
           <div class="flex-1 flex flex-col items-center justify-center text-center text-slate-400 p-8">
